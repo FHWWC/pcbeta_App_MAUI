@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<Shell
+    x:Class="PCBetaMAUI.AppShell"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:local="clr-namespace:PCBetaMAUI"
+    xmlns:views="clr-namespace:PCBetaMAUI.Views"
+    Title="PCBetaMAUI">
+
+    <Shell.Resources>
+        <ResourceDictionary>
+            <Style x:Key="BottomNaviButtonStyle" TargetType="Button">
+                <Setter Property="BackgroundColor" Value="DodgerBlue"/>
+                <Setter Property="TextColor" Value="White"/>
+                <Setter Property="CornerRadius" Value="0"/>
+                <Setter Property="Padding" Value="0"/>
+                <Setter Property="HeightRequest" Value="40"/>
+                <Setter Property="VisualStateManager.VisualStateGroups">
+                    <VisualStateGroupList>
+                        <VisualStateGroup Name="CommonStates">
+                            <VisualState Name="Normal">
+                                <VisualState.Setters>
+                                    <Setter Property="BackgroundColor" Value="DodgerBlue"/>
+                                </VisualState.Setters>
+                            </VisualState>
+                            <VisualState Name="PointerOver">
+                                <VisualState.Setters>
+                                    <Setter Property="BackgroundColor" Value="SkyBlue"/>
+                                </VisualState.Setters>
+                            </VisualState>
+                            <VisualState Name="Pressed">
+                                <VisualState.Setters>
+                                    <Setter Property="BackgroundColor" Value="LightBlue"/>
+                                </VisualState.Setters>
+                            </VisualState>
+                        </VisualStateGroup>
+                    </VisualStateGroupList>
+                </Setter>
+            </Style>
+            <Style x:Key="MordenButtonStyle" TargetType="Button">
+                <Setter Property="BackgroundColor" Value="DodgerBlue"/>
+                <Setter Property="TextColor" Value="White"/>
+                <Setter Property="CornerRadius" Value="5"/>
+                <Setter Property="HeightRequest" Value="30"/>
+                <Setter Property="VisualStateManager.VisualStateGroups">
+                    <VisualStateGroupList>
+                        <VisualStateGroup Name="CommonStates">
+                            <VisualState Name="Normal">
+                                <VisualState.Setters>
+                                    <Setter Property="BackgroundColor" Value="DodgerBlue"/>
+                                </VisualState.Setters>
+                            </VisualState>
+                            <VisualState Name="PointerOver">
+                                <VisualState.Setters>
+                                    <Setter Property="BackgroundColor" Value="SkyBlue"/>
+                                </VisualState.Setters>
+                            </VisualState>
+                            <VisualState Name="Pressed">
+                                <VisualState.Setters>
+                                    <Setter Property="BackgroundColor" Value="LightBlue"/>
+                                </VisualState.Setters>
+                            </VisualState>
+                        </VisualStateGroup>
+                    </VisualStateGroupList>
+                </Setter>
+            </Style>
+        </ResourceDictionary>
+    </Shell.Resources>
+    
+    <Shell.FlyoutHeader>
+        <VerticalStackLayout Padding="0,10,0,20">
+            <Image x:Name="UserAvatar" Source="defalut_avatar_big.png" HeightRequest="180" x:FieldModifier="Public"/>
+            <HorizontalStackLayout HorizontalOptions="Center" Margin="0,10,0,0">
+                <Label x:Name="UserName" Text="欢迎您！游客，请登录" TextColor="DarkRed"  FontSize="18" x:FieldModifier="Public"/>
+            </HorizontalStackLayout>
+            <Grid>
+                <Button x:Name="LoginButton" Text="登录" Style="{StaticResource MordenButtonStyle}" Margin="20,5" IsVisible="True" Clicked="OnLoginButtonClicked"/>
+                <Button x:Name="LogoutButton" Text="退出" Style="{StaticResource MordenButtonStyle}" Margin="20,5" IsVisible="False"/>
+            </Grid>
+        </VerticalStackLayout>
+    </Shell.FlyoutHeader>
+    
+    <ShellContent
+        Title="论坛"
+        ContentTemplate="{DataTemplate views:MainThreadPage}"
+        Route="mainthread" />
+
+    <ShellContent
+        Title="帖子列表"
+        ContentTemplate="{DataTemplate views:ThreadListPage}"
+        Route="threadlist" IsVisible="False" />
+    
+    <ShellContent
+        Title="帖子详情"
+        ContentTemplate="{DataTemplate views:ThreadContentPage}"
+        Route="threadcontent" IsVisible="False" />
+
+    <ShellContent
+        Title="登录"
+        ContentTemplate="{DataTemplate views:LoginPage}"
+        Route="login"  IsVisible="False" />
+
+</Shell>

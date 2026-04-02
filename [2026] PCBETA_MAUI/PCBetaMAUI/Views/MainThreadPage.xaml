@@ -1,0 +1,165 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+                          xmlns:vm="clr-namespace:PCBetaMAUI.ViewModels"
+             x:Class="PCBetaMAUI.Views.MainThreadPage"
+             x:Name="MainContent"  Shell.NavBarIsVisible="False"    >
+
+    <ContentPage.BindingContext>
+        <vm:MainThreadViewModel/>
+    </ContentPage.BindingContext>
+    <ContentPage.Resources>
+        <ResourceDictionary>
+            <Style x:Key="BottomNaviButtonStyle" TargetType="Button">
+                <Setter Property="BackgroundColor" Value="DodgerBlue"/>
+                <Setter Property="TextColor" Value="White"/>
+                <Setter Property="CornerRadius" Value="0"/>
+                <Setter Property="Padding" Value="0"/>
+                <Setter Property="HeightRequest" Value="40"/>
+                <Setter Property="VisualStateManager.VisualStateGroups">
+                    <VisualStateGroupList>
+                        <VisualStateGroup Name="CommonStates">
+                            <VisualState Name="Normal">
+                                <VisualState.Setters>
+                                    <Setter Property="BackgroundColor" Value="DodgerBlue"/>
+                                </VisualState.Setters>
+                            </VisualState>
+                            <VisualState Name="PointerOver">
+                                <VisualState.Setters>
+                                    <Setter Property="BackgroundColor" Value="SkyBlue"/>
+                                </VisualState.Setters>
+                            </VisualState>
+                            <VisualState Name="Pressed">
+                                <VisualState.Setters>
+                                    <Setter Property="BackgroundColor" Value="LightBlue"/>
+                                </VisualState.Setters>
+                            </VisualState>
+                        </VisualStateGroup>
+                    </VisualStateGroupList>
+                </Setter>
+            </Style>
+        </ResourceDictionary>
+    </ContentPage.Resources>
+
+    <Grid RowDefinitions="50,*,60">
+
+        <Grid ColumnDefinitions="180,*" Padding="15,0">
+            <Image Source="pcbeta_logo.png" HeightRequest="50" HorizontalOptions="Start"/>
+            <Label Text="远景论坛 - 前沿科技与智慧生态的极客社区" HorizontalOptions="Start" VerticalOptions="End" FontAttributes="Bold" FontSize="16" Margin="0,0,0,5" Grid.Column="1"/>
+        </Grid>
+
+        <!-- 加载指示器 -->
+        <ActivityIndicator Grid.Row="1"
+                          IsRunning="{Binding IsLoading}"
+                          IsVisible="{Binding IsLoading}"
+                          Color="#1985DB"
+                          VerticalOptions="Center"
+                          HorizontalOptions="Center"/>
+
+        <!-- 错误消息 -->
+        <!--<Label Grid.Row="0"
+               Text="{Binding ErrorMessage}"
+               TextColor="Red"
+               FontSize="14"
+               HorizontalOptions="Center"
+               VerticalOptions="Center"
+               IsVisible="{Binding ErrorMessage, Converter={StaticResource StringNotNullToBoolConverter}}"/>-->
+
+        <!-- 论坛分类和板块列表 -->
+        <ScrollView Grid.Row="1">
+            <VerticalStackLayout Padding="0" Spacing="0">
+                <!-- 使用 CollectionView 遍历分类 -->
+                <CollectionView ItemsSource="{Binding ForumCategories}"
+                                SelectionMode="None">
+
+                    <CollectionView.ItemsLayout>
+                        <LinearItemsLayout Orientation="Vertical" ItemSpacing="0"/>
+                    </CollectionView.ItemsLayout>
+
+                    <CollectionView.ItemTemplate>
+                        <DataTemplate>
+                            <VerticalStackLayout Spacing="0" Padding="0">
+
+                                <!-- 分类标题 -->
+                                <Frame Padding="15,12" CornerRadius="0" BorderColor="#1985DB" 
+                                       HasShadow="False" Margin="0,8,0,0" BackgroundColor="#F0F7FF">
+                                    <Label Text="{Binding CategoryName}" 
+                                           FontSize="15" 
+                                           FontAttributes="Bold"
+                                           TextColor="#1985DB"/>
+                                </Frame>
+
+                                <!-- 分类下的板块列表 - 使用 BindableLayout 简化绑定 -->
+                                <VerticalStackLayout Padding="0,8,0,0" Spacing="8"
+                                                     BindableLayout.ItemsSource="{Binding Sections}">
+                                    <BindableLayout.ItemTemplate>
+                                        <DataTemplate>
+                                            <Frame Padding="15" CornerRadius="8" BorderColor="#E0E0E0" 
+                                                   HasShadow="True" Margin="10,0">
+
+                                                <!-- 使用 TapGestureRecognizer 处理板块点击 -->
+                                                <Frame.GestureRecognizers>
+                                                    <TapGestureRecognizer Tapped="OnForumTapped" CommandParameter="{Binding .}"/>
+                                                </Frame.GestureRecognizers>
+
+                                                <Grid ColumnDefinitions="100,*">
+                                                    <Image HeightRequest="48" Source="{Binding LogoUrl}"/>
+                                                    <VerticalStackLayout Spacing="8" Grid.Column="1">
+                                                        <!-- 板块名称和今日新帖 - 横向排列 -->
+                                                        <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                                                            <StackLayout Orientation="Horizontal" Spacing="8">
+                                                                <Label Text="{Binding Name}" 
+                                                               FontSize="14" 
+                                                               FontAttributes="Bold"
+                                                               VerticalOptions="Center"/>
+                                                                <Label Text="{Binding TodayNewPosts, StringFormat='({0})'}" 
+                                                               FontSize="12"
+                                                               FontAttributes="Bold"
+                                                               TextColor="Red"
+                                                               VerticalOptions="Center"
+                                                               IsVisible="{Binding TodayNewPosts, Converter={StaticResource StringToBoolConverter}}"/>
+                                                            </StackLayout>
+                                                            <Label Text="{Binding LastReply}" 
+                                                               Grid.Column="1" 
+                                                               FontSize="11"
+                                                              />
+                                                        </Grid>
+
+                                                        <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                                                            <Label Text="{Binding ThreadCount, StringFormat='主题: {0}'}" 
+                                                               FontSize="11"
+                                                               TextColor="Gray"/>
+                                                            <Label Text="{Binding PostCount, StringFormat='帖数: {0}'}" 
+                                                               Grid.Column="1" 
+                                                               FontSize="11"
+                                                               TextColor="Gray"/>
+                                                        </Grid>
+                                                    </VerticalStackLayout>
+                                                </Grid>
+                                            </Frame>
+                                        </DataTemplate>
+                                    </BindableLayout.ItemTemplate>
+                                </VerticalStackLayout>
+                            </VerticalStackLayout>
+                        </DataTemplate>
+                    </CollectionView.ItemTemplate>
+                </CollectionView>
+            </VerticalStackLayout>
+        </ScrollView>
+
+        <!-- 底部导航 -->
+        <Grid Grid.Row="2" ColumnDefinitions="*,*,*" ColumnSpacing="0">
+            <Button Text="刷新" 
+                    Command="{Binding RefreshCommand}"
+                    Style="{StaticResource BottomNaviButtonStyle}" Margin="2,0" VerticalOptions="End"/>
+            <Button Text="搜索" 
+                    Command="{Binding SearchCommand}"
+                    Style="{StaticResource BottomNaviButtonStyle}" Margin="2,0" VerticalOptions="End"
+                    Grid.Column="1"/>
+            <Button Text="我的" 
+                    Command="{Binding MyCommand}"
+                    Style="{StaticResource BottomNaviButtonStyle}" Margin="2,0" VerticalOptions="End"
+                    Grid.Column="2"/>
+        </Grid>
+    </Grid>
+</ContentPage>

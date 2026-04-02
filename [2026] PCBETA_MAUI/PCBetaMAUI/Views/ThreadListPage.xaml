@@ -1,0 +1,223 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+                          xmlns:vm="clr-namespace:PCBetaMAUI.ViewModels"
+             x:Class="PCBetaMAUI.Views.ThreadListPage" Shell.NavBarIsVisible="False"
+             Title="帖子列表">
+
+    <ContentPage.BindingContext>
+        <vm:ThreadListViewModel/>
+    </ContentPage.BindingContext>
+    
+    <ContentPage.Resources>
+        <ResourceDictionary>
+            <Style x:Key="BottomNaviButtonStyle" TargetType="Button">
+                <Setter Property="BackgroundColor" Value="DodgerBlue"/>
+                <Setter Property="TextColor" Value="White"/>
+                <Setter Property="CornerRadius" Value="0"/>
+                <Setter Property="Padding" Value="0"/>
+                <Setter Property="HeightRequest" Value="40"/>
+                <Setter Property="VisualStateManager.VisualStateGroups">
+                    <VisualStateGroupList>
+                        <VisualStateGroup Name="CommonStates">
+                            <VisualState Name="Normal">
+                                <VisualState.Setters>
+                                    <Setter Property="BackgroundColor" Value="DodgerBlue"/>
+                                </VisualState.Setters>
+                            </VisualState>
+                            <VisualState Name="PointerOver">
+                                <VisualState.Setters>
+                                    <Setter Property="BackgroundColor" Value="SkyBlue"/>
+                                </VisualState.Setters>
+                            </VisualState>
+                            <VisualState Name="Pressed">
+                                <VisualState.Setters>
+                                    <Setter Property="BackgroundColor" Value="LightBlue"/>
+                                </VisualState.Setters>
+                            </VisualState>
+                        </VisualStateGroup>
+                    </VisualStateGroupList>
+                </Setter>
+            </Style>
+            <Style x:Key="MordenButtonStyle" TargetType="Button">
+                <Setter Property="BackgroundColor" Value="DodgerBlue"/>
+                <Setter Property="TextColor" Value="White"/>
+                <Setter Property="CornerRadius" Value="5"/>
+                <Setter Property="HeightRequest" Value="30"/>
+                <Setter Property="VisualStateManager.VisualStateGroups">
+                    <VisualStateGroupList>
+                        <VisualStateGroup Name="CommonStates">
+                            <VisualState Name="Normal">
+                                <VisualState.Setters>
+                                    <Setter Property="BackgroundColor" Value="DodgerBlue"/>
+                                </VisualState.Setters>
+                            </VisualState>
+                            <VisualState Name="PointerOver">
+                                <VisualState.Setters>
+                                    <Setter Property="BackgroundColor" Value="SkyBlue"/>
+                                </VisualState.Setters>
+                            </VisualState>
+                            <VisualState Name="Pressed">
+                                <VisualState.Setters>
+                                    <Setter Property="BackgroundColor" Value="LightBlue"/>
+                                </VisualState.Setters>
+                            </VisualState>
+                        </VisualStateGroup>
+                    </VisualStateGroupList>
+                </Setter>
+            </Style>
+        </ResourceDictionary>
+    </ContentPage.Resources>
+
+    <Grid RowDefinitions="50,*,60">
+
+        <!-- 筛选栏 -->
+        <Grid ColumnDefinitions="*,80" Padding="10" BackgroundColor="#F5F5F5">
+            <Label Text="{Binding BoardName}" FontSize="22" VerticalOptions="Center" FontAttributes="Bold"/>
+            <Button Text="排序"  Style="{StaticResource MordenButtonStyle}" Grid.Column="1"/>
+        </Grid>
+
+        <!-- 加载指示器 -->
+        <ActivityIndicator Grid.Row="1"
+                          IsRunning="{Binding IsLoading}"
+                          IsVisible="{Binding IsLoading}"
+                          Color="#1985DB"
+                          VerticalOptions="Center"
+                          HorizontalOptions="Center"/>
+
+        <!-- 错误消息 -->
+        <Label Grid.Row="1"
+               Text="{Binding ErrorMessage}"
+               TextColor="Red"
+               FontSize="14"
+               HorizontalOptions="Center"
+               VerticalOptions="Center"
+               IsVisible="{Binding ErrorMessage, Converter={StaticResource StringToBoolConverter}}"/>
+
+        <!--  改进：使用 ScrollView 包含两个列表区域，支持整体滚动 -->
+        <ScrollView Grid.Row="1" IsVisible="{Binding HasThreads}">
+            <VerticalStackLayout Spacing="0">
+
+                <!-- ============ 置顶帖区域 ============ -->
+                <VerticalStackLayout Spacing="8" Padding="10,0" IsVisible="{Binding StickyThreads.Count, Converter={StaticResource StringNotEqualZeroConverter}}">
+                    <!-- 置顶帖标题按钮 - 展开/收回 -->
+                    <Grid ColumnDefinitions="*,40" HeightRequest="50" BackgroundColor="GhostWhite">
+                        <Label Text="置顶帖" FontSize="16" FontAttributes="Bold" TextColor="#FF6B35" HorizontalOptions="Center" VerticalOptions="Center"/>
+                        <Label Grid.Column="1" 
+                               Text="{Binding IsStickyExpanded, Converter={StaticResource ExpandedToSymbolConverter}}" 
+                           FontSize="30" 
+                               TextColor="#FF6B35" 
+                               HorizontalOptions="End"
+                           VerticalOptions="Center" Margin="0,0,10,0"/>
+                        <Grid.GestureRecognizers>
+                            <TapGestureRecognizer Command="{Binding ToggleStickyExpandedCommand}" NumberOfTapsRequired="1"/>
+                        </Grid.GestureRecognizers>
+                    </Grid>
+
+                    <!-- 置顶帖列表 - 根据展开状态显示 -->
+                    <CollectionView ItemsSource="{Binding StickyThreads}"
+                                    SelectionMode="Single"
+                                    SelectionChangedCommand="{Binding SelectThreadCommand}"
+                                    SelectionChangedCommandParameter="{Binding SelectedItem, Source={RelativeSource Self}}"
+                                    x:Name="StickyThreadsCollectionView"
+                                    IsVisible="{Binding IsStickyExpanded}">
+
+                        <CollectionView.ItemsLayout>
+                            <LinearItemsLayout Orientation="Vertical" ItemSpacing="5"/>
+                        </CollectionView.ItemsLayout>
+
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate>
+                                <!-- 置顶帖使用高亮背景颜色 -->
+                                <Frame Padding="12" CornerRadius="6" BorderColor="#FF6B35" Margin="8,3" HasShadow="True">
+                                    <VerticalStackLayout Spacing="6">
+                                        <!-- 置顶标签 -->
+                                        <StackLayout Orientation="Horizontal" Spacing="8">
+                                            <Label Text="📌" FontSize="14" VerticalOptions="Center"/>
+                                            <Label Text="{Binding Title}" FontSize="14" FontAttributes="Bold" LineBreakMode="TailTruncation" VerticalOptions="Center"/>
+                                        </StackLayout>
+
+                                        <Grid ColumnDefinitions="*,100" ColumnSpacing="10">
+                                            <StackLayout Spacing="2">
+                                                <Label Text="{Binding Author, StringFormat='作者: {0}'}" FontSize="11" TextColor="Gray"/>
+                                                <Label Text="{Binding PostTime, StringFormat='时间: {0:yyyy-MM-dd HH:mm}'}" FontSize="11" TextColor="Gray"/>
+                                            </StackLayout>
+
+                                            <StackLayout Grid.Column="1" Spacing="2">
+                                                <Label Text="{Binding Replies, StringFormat='回复: {0}'}" FontSize="11" TextColor="#FF6B35" FontAttributes="Bold"/>
+                                                <Label Text="{Binding Views, StringFormat='查看: {0}'}" FontSize="11" TextColor="#FF6B35" FontAttributes="Bold"/>
+                                            </StackLayout>
+                                        </Grid>
+                                    </VerticalStackLayout>
+                                </Frame>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+                </VerticalStackLayout>
+
+                <!-- ============ 普通帖子区域 ============ -->
+                <VerticalStackLayout Spacing="8" Padding="10,0" >
+                    <!-- 今日好贴 - 展开/收回按钮 -->
+                    <Grid ColumnDefinitions="*,40" HeightRequest="50" BackgroundColor="GhostWhite">
+                        <Label Text="今日好贴" FontSize="16" FontAttributes="Bold" TextColor="#1985DB" HorizontalOptions="Center" VerticalOptions="Center"/>
+                        <Label Grid.Column="1" 
+                           Text="{Binding IsThreadsExpanded, Converter={StaticResource ExpandedToSymbolConverter}}" 
+                           FontSize="30" 
+                           TextColor="#1985DB" 
+                           HorizontalOptions="End"
+                           VerticalOptions="Center" Margin="0,0,10,0"/>
+                        <Grid.GestureRecognizers>
+                            <TapGestureRecognizer Command="{Binding ToggleThreadsExpandedCommand}" NumberOfTapsRequired="1"/>
+                        </Grid.GestureRecognizers>
+                    </Grid>
+                    
+                    <!-- 普通帖子列表 - 根据展开状态显示 -->
+                    <CollectionView ItemsSource="{Binding Threads}"
+                                    SelectionMode="Single"
+                                    SelectionChangedCommand="{Binding SelectThreadCommand}"
+                                    SelectionChangedCommandParameter="{Binding SelectedItem, Source={RelativeSource Self}}"
+                                    x:Name="ThreadsCollectionView"
+                                    IsVisible="{Binding IsThreadsExpanded}">
+
+                        <CollectionView.ItemsLayout>
+                            <LinearItemsLayout Orientation="Vertical" ItemSpacing="5"/>
+                        </CollectionView.ItemsLayout>
+
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate>
+                                <Frame Padding="12" CornerRadius="6" BorderColor="#E0E0E0" Margin="8,5">
+                                    <VerticalStackLayout Spacing="6">
+                                        <Label Text="{Binding Title}" FontSize="14" FontAttributes="Bold" LineBreakMode="TailTruncation"/>
+
+                                        <Grid ColumnDefinitions="*,100" ColumnSpacing="10">
+                                            <StackLayout Spacing="2">
+                                                <Label Text="{Binding Author, StringFormat='作者: {0}'}" FontSize="11" TextColor="Gray"/>
+                                                <Label Text="{Binding PostTime, StringFormat='时间: {0:yyyy-MM-dd HH:mm}'}" FontSize="11" TextColor="Gray"/>
+                                            </StackLayout>
+
+                                            <StackLayout Grid.Column="1" Spacing="2">
+                                                <Label Text="{Binding Replies, StringFormat='回复: {0}'}" FontSize="11" TextColor="#1985DB"/>
+                                                <Label Text="{Binding Views, StringFormat='查看: {0}'}" FontSize="11" TextColor="#1985DB"/>
+                                            </StackLayout>
+                                        </Grid>
+                                    </VerticalStackLayout>
+                                </Frame>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+                </VerticalStackLayout>
+            </VerticalStackLayout>
+        </ScrollView>
+
+        <!-- 底部导航：新增刷新按钮，并统一使用 MainThreadPage 相同的样式 BottomNaviButtonStyle -->
+        <Grid RowDefinitions="*" ColumnDefinitions="*,*,*,*" Grid.Row="2" >
+            <!-- 新增：刷新当前页面（重新加载） -->
+            <Button Text="刷新" Command="{Binding RefreshCommand}" Style="{StaticResource BottomNaviButtonStyle}" Margin="2,0" VerticalOptions="End"  />
+
+            <!-- 保持上/发新帖/下一页，统一样式 -->
+            <Button Text="上一页" Command="{Binding PreviousPageCommand}" Style="{StaticResource BottomNaviButtonStyle}"  Margin="2,0" VerticalOptions="End"  Grid.Column="1"/>
+            <Button Text="发新帖" Style="{StaticResource BottomNaviButtonStyle}" Margin="2,0" VerticalOptions="End"  Grid.Column="2"/>
+            <Button Text="下一页" Command="{Binding NextPageCommand}" Style="{StaticResource BottomNaviButtonStyle}" Margin="2,0" VerticalOptions="End"  Grid.Column="3"/>
+        </Grid>
+    </Grid>
+</ContentPage>
