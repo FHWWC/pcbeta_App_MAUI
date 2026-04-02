@@ -1,7 +1,6 @@
-pcbeta-UWP -- pcbeta UWP App -- bbs.pcbeta.com
-# 远景第三方UWP客户端
-# [Microsoft Store](https://www.microsoft.com/store/apps/9NCT8JFTSQ07)
-问题反馈：http://bbs.pcbeta.com/viewthread-1882330-1-1.html
+pcbeta App -- bbs.pcbeta.com
+# 远景论坛第三方客户端 
+
   
 <br/>
 开发者联系方式：  
