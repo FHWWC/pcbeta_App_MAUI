@@ -477,20 +477,49 @@ public static class ContentElementRenderer
 
     /// <summary>
     /// 创建表情图片
+    /// 改进：如果 URL 为空或无效，显示备用文本而不是空白
     /// </summary>
     private static View CreateEmojiImage(ContentElement element)
     {
         if (string.IsNullOrEmpty(element.Url))
-            return new Label { Text = element.Text ?? "[表情]" };
-
-        return new Image
         {
-            Source = ImageSource.FromUri(new Uri(element.Url)),
-            WidthRequest = 24,
-            HeightRequest = 24,
-            Aspect = Aspect.AspectFit,
-            Margin = new Thickness(2, 0),
-        };
+            // ✅ 修复：当 Url 为空时，使用 Text 作为备用显示文本
+            // 这样可以避免返回空 Label，导致后续内容无法显示
+            return new Label 
+            { 
+                Text = element.Text ?? "[表情]",
+                FontSize = 16,  // 与表情图片大小相符
+                VerticalOptions = LayoutOptions.Center,
+                Margin = new Thickness(2, 0)
+            };
+        }
+
+        try
+        {
+            // 尝试从 URL 加载表情图片
+            var image = new Image
+            {
+                Source = ImageSource.FromUri(new Uri(element.Url)),
+                WidthRequest = 24,
+                HeightRequest = 24,
+                Aspect = Aspect.AspectFit,
+                Margin = new Thickness(2, 0),
+            };
+
+            return image;
+        }
+        catch (Exception ex)
+        {
+            // ✅ 修复：如果 URL 加载失败，显示备用文本而不是空白
+            Debug.WriteLine($"⚠️ 表情图片加载失败 ({element.Url}): {ex.Message}");
+            return new Label 
+            { 
+                Text = element.Text ?? "[表情]",
+                FontSize = 16,
+                VerticalOptions = LayoutOptions.Center,
+                Margin = new Thickness(2, 0)
+            };
+        }
     }
 
     /// <summary>

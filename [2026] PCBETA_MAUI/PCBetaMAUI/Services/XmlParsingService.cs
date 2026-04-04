@@ -1865,7 +1865,6 @@ public partial class XmlParsingService
     /// 1. 文件名直接在 &lt;a&gt; 标签的文本中（a 标签有 id="aid*"）
     /// 2. 大小和下载次数在紧跟其后的 &lt;em class="xg1"&gt; 中
     /// 3. 上传时间在 &lt;span class="y"&gt; 中
-    /// 4. 通常没有售价信息（这些是已上传的用户文件，不是需要购买的）
     /// </summary>
     private List<ContentElement>? ExtractPattlAttachmentsFromDlBlock(string dlBlockHtml)
     {
@@ -2437,19 +2436,38 @@ public partial class XmlParsingService
     /// </summary>
     private ContentElement? ParseEmojiTag(string emojiTag)
     {
+        string rootURL = "https://bbs.pcbeta.com/";
         try
         {
             var smilieIdMatch = Regex.Match(emojiTag, @"smilieid=""([^""]*)""", RegexOptions.IgnoreCase);
             var srcMatch = Regex.Match(emojiTag, @"src=""([^""]*)""", RegexOptions.IgnoreCase);
+            var altMatch = Regex.Match(emojiTag, @"alt=""([^""]*)""", RegexOptions.IgnoreCase);
+            var titleMatch = Regex.Match(emojiTag, @"title=""([^""]*)""", RegexOptions.IgnoreCase);
 
             if (smilieIdMatch.Success || srcMatch.Success)
             {
-                return new ContentElement
+                // 优先使用 alt 或 title 属性作为表情的显示文本
+                // 如果都没有，使用 emoji ID 或默认值
+                var emojiText = altMatch.Success ? altMatch.Groups[1].Value 
+                    : titleMatch.Success ? titleMatch.Groups[1].Value 
+                    : (smilieIdMatch.Success ? smilieIdMatch.Groups[1].Value : "[表情]");
+
+                var emojiElement = new ContentElement
                 {
                     Type = ContentElementType.Emoji,
+                    Text = emojiText,  // ✅ 关键修复：添加 Text 属性，作为 URL 加载失败时的备用显示
                     EmojiId = smilieIdMatch.Success ? smilieIdMatch.Groups[1].Value : "",
                     Url = srcMatch.Success ? srcMatch.Groups[1].Value : ""
                 };
+
+                //额外在对URL进行判断
+                if(!emojiElement.Url.StartsWith("https://bbs.pcbeta.com"))
+                {
+                    emojiElement.Url = rootURL + emojiElement.Url.TrimStart('/');
+                }
+
+                Debug.WriteLine($" 提取表情: Text='{emojiText}', EmojiId='{emojiElement.EmojiId}', Url='{emojiElement.Url.Substring(0, Math.Min(50, emojiElement.Url.Length))}'");
+                return emojiElement;
             }
         }
         catch (Exception ex)
