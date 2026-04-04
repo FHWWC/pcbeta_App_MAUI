@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:PCBetaMAUI.ViewModels"
              xmlns:models="clr-namespace:PCBetaMAUI.Models"
+             xmlns:local="clr-namespace:PCBetaMAUI.Behaviors"
              x:Class="PCBetaMAUI.Views.ThreadContentPage"
              Title="帖子内容">
 
@@ -388,19 +389,19 @@
                                             <Label Text="{Binding EditStatus}"
                                                FontSize="10"
                                                TextColor="#C71585"
+                                               ClassId="reply_edit_status"
                                                IsVisible="{Binding EditStatus, Converter={StaticResource StringNotNullToBoolConverter}}"
                                                Margin="0,5,0,0"/>
 
-                                            <!-- 4. 回帖内容 -->
-                                            <Label Text="{Binding PlainTextContent}"
-                                               FontSize="13"
-                                               LineBreakMode="WordWrap"
-                                               TextColor="#333333"
-                                               Margin="0,8,0,0"
-                                               IsVisible="{Binding PlainTextContent, Converter={StaticResource StringNotNullToBoolConverter}}"/>
+                                            <!-- 4. 回帖内容 - 使用 Behavior 动态渲染 ContentElements -->
+                                            <VerticalStackLayout Spacing="5" Padding="0">
+                                                <VerticalStackLayout.Behaviors>
+                                                    <local:ReplyContentRenderBehavior/>
+                                                </VerticalStackLayout.Behaviors>
+                                            </VerticalStackLayout>
 
                                             <!-- 5. 操作按钮 -->
-                                            <Grid ColumnDefinitions="*,*,*" ColumnSpacing="10" Margin="0,8,0,0" IsVisible="{Binding CanReply}">
+                                            <Grid ColumnDefinitions="*,*,*" ColumnSpacing="10" Margin="0,8,0,0" ClassId="reply_actions" IsVisible="{Binding CanReply}">
                                                 <Button Text="点评" 
                                                     BackgroundColor="#D2691E" 
                                                     TextColor="White"
