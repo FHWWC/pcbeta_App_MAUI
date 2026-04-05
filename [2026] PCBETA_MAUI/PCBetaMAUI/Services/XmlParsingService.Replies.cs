@@ -177,11 +177,40 @@ public partial class XmlParsingService
                 reply.ContentElements = ParseRichTextContent(messageHtml, skipEditStatus: false);
 
                 // 8a. 提取回帖中的附件
+                // 注意：ParseRichTextContent 可能已经从富文本中提取了附件
+                // ExtractReplyAttachments 会再次提取附件元素
+                // 需要对两个源的附件进行去重，防止添加重复的附件
                 var attachmentElements = ExtractReplyAttachments(postHtml);
                 if (attachmentElements != null && attachmentElements.Count > 0)
                 {
-                    reply.ContentElements.AddRange(attachmentElements);
-                    Debug.WriteLine($" 回帖附件数: {attachmentElements.Count}");
+                    // 从 ParseRichTextContent 已有的附件中收集所有 AttachmentId
+                    var existingAttachmentIds = new HashSet<string>();
+                    foreach (var elem in reply.ContentElements)
+                    {
+                        if (elem.Type == ContentElementType.Attachment && !string.IsNullOrEmpty(elem.AttachmentId))
+                        {
+                            existingAttachmentIds.Add(elem.AttachmentId);
+                            Debug.WriteLine($" 从 ParseRichTextContent 找到现有附件: {elem.FileName} (aid={elem.AttachmentId})");
+                        }
+                    }
+
+                    // 仅添加还没有的附件
+                    int newAttachmentCount = 0;
+                    foreach (var att in attachmentElements)
+                    {
+                        if (string.IsNullOrEmpty(att.AttachmentId) || !existingAttachmentIds.Contains(att.AttachmentId))
+                        {
+                            reply.ContentElements.Add(att);
+                            newAttachmentCount++;
+                            Debug.WriteLine($" ✅ 添加新附件: {att.FileName} (aid={att.AttachmentId})");
+                        }
+                        else
+                        {
+                            Debug.WriteLine($" ⚠️ 跳过重复附件: {att.FileName} (aid={att.AttachmentId})");
+                        }
+                    }
+
+                    Debug.WriteLine($" 回帖附件统计: 已有{existingAttachmentIds.Count}个，新增{newAttachmentCount}个");
                 }
 
                 reply.PlainTextContent = GeneratePlainText(reply.ContentElements);
@@ -428,25 +457,59 @@ public partial class XmlParsingService
 
     /// <summary>
     ///  新增：从回帖HTML中提取附件
-    /// 回帖附件与楼主附件的处理方式相同，支持两种格式：
-    /// 1. pattl 容器格式：<div class="pattl">...<dl class="tattl">...<a>文件名</a>...</dl></div>
-    ///    文件信息包含：<a href="...attachment...">文件名</a> 和 <em>(大小, 下载次数: 数字)</em>
-    /// 2. ignore_js_op 块内的图片+附件信息格式：<img ...> 和 <div class="tip aimg_tip">...</div>
+    /// 回帖附件支持两种格式：
+    /// 1. inline span 格式：<span id="attach_*">...<a>文件名</a>...<em>(大小, 下载次数, 售价)</em>...</span>
+    /// 2. pattl 容器格式：<div class="pattl">...<dl class="tattl">...<a>文件名</a>...</dl></div>
+    ///    文件信息包含多个 <p> 标签：文件大小、下载积分、售价等
     /// </summary>
     private List<ContentElement>? ExtractReplyAttachments(string postHtml)
     {
         var attachments = new List<ContentElement>();
+        var attachmentIds = new HashSet<string>();  // 用于去重
 
         try
         {
-            // 方式1：提取 pattl 容器中的附件（用户上传的文件）
+            // 方式1：提取 inline span 格式的附件
+            var inlineAttachments = ExtractReplyInlineAttachments(postHtml);
+            if (inlineAttachments != null && inlineAttachments.Count > 0)
+            {
+                foreach (var att in inlineAttachments)
+                {
+                    if (!string.IsNullOrEmpty(att.AttachmentId) && !attachmentIds.Contains(att.AttachmentId))
+                    {
+                        attachments.Add(att);
+                        attachmentIds.Add(att.AttachmentId);
+                        Debug.WriteLine($" ✅ 添加 inline 附件: {att.FileName} (aid={att.AttachmentId})");
+                    }
+                    else
+                    {
+                        Debug.WriteLine($" ⚠️ 跳过重复的 inline 附件: {att.FileName} (aid={att.AttachmentId})");
+                    }
+                }
+                Debug.WriteLine($" 从 inline span 提取回帖附件: {inlineAttachments.Count} 个");
+            }
+
+            // 方式2：提取 pattl 容器中的附件（用户上传的文件）
             var pattlAttachments = ExtractReplyPattlAttachments(postHtml);
             if (pattlAttachments != null && pattlAttachments.Count > 0)
             {
-                attachments.AddRange(pattlAttachments);
+                foreach (var att in pattlAttachments)
+                {
+                    if (!string.IsNullOrEmpty(att.AttachmentId) && !attachmentIds.Contains(att.AttachmentId))
+                    {
+                        attachments.Add(att);
+                        attachmentIds.Add(att.AttachmentId);
+                        Debug.WriteLine($" ✅ 添加 pattl 附件: {att.FileName} (aid={att.AttachmentId})");
+                    }
+                    else
+                    {
+                        Debug.WriteLine($" ⚠️ 跳过重复的 pattl 附件: {att.FileName} (aid={att.AttachmentId})");
+                    }
+                }
                 Debug.WriteLine($" 从 pattl 容器提取回帖附件: {pattlAttachments.Count} 个");
             }
 
+            Debug.WriteLine($" 回帖总共提取附件: {attachments.Count} 个 (去重后)");
             return attachments.Count > 0 ? attachments : null;
         }
         catch (Exception ex)
@@ -454,6 +517,194 @@ public partial class XmlParsingService
             Debug.WriteLine($"❌ 提取回帖附件错误: {ex.Message}");
             return null;
         }
+    }
+
+    /// <summary>
+    ///  新增：从回帖HTML中提取 inline span 格式的附件
+    /// 使用与楼主相同的 ParseAttachmentSpan 逻辑
+    /// inline span 结构：<span id="attach_*"><a href="...">文件名</a><em>(大小, 下载次数)</em></span>
+    /// </summary>
+    private List<ContentElement>? ExtractReplyInlineAttachments(string postHtml)
+    {
+        var attachments = new List<ContentElement>();
+
+        try
+        {
+            // 查找所有 <span id="attach_*"> 元素
+            // 模式需要灵活匹配，支持任何 href 格式（mod=attachment 或 attachpay）
+            var spanPattern = @"<span[^>]*id=""attach_\d+""[^>]*>(.*?)</span>";
+            var spanMatches = Regex.Matches(postHtml, spanPattern, RegexOptions.IgnoreCase | RegexOptions.Singleline);
+
+            if (spanMatches.Count == 0)
+            {
+                Debug.WriteLine("ℹ️ 回帖中未找到 inline span 附件");
+                return null;
+            }
+
+            foreach (Match spanMatch in spanMatches)
+            {
+                var spanTag = spanMatch.Value;  // 完整的 <span>...</span>
+
+                try
+                {
+                    // 使用与楼主相同的逻辑解析附件
+                    var attachment = ParseReplyAttachmentSpan(spanTag, postHtml);
+                    if (attachment != null)
+                    {
+                        attachments.Add(attachment);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"❌ 解析回帖 inline 附件错误: {ex.Message}");
+                    continue;
+                }
+            }
+
+            if (attachments.Count > 0)
+            {
+                Debug.WriteLine($" 回帖 inline 附件提取完成，共 {attachments.Count} 个");
+                return attachments;
+            }
+
+            Debug.WriteLine("ℹ️ 回帖中未能提取到 inline 附件");
+            return null;
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"❌ 提取回帖 inline 附件错误: {ex.Message}");
+            return null;
+        }
+    }
+
+    /// <summary>
+    ///  新增：解析回帖附件容器 &lt;span id="attach_*"&gt;
+    /// 使用与楼主相同的 ParseAttachmentSpan 逻辑
+    /// 支持两种结构：
+    /// 1. 已购买附件（mod=attachment）：SalePrice = null
+    /// 2. 未购买附件（attachpay）：SalePrice > 0
+    /// </summary>
+    private ContentElement? ParseReplyAttachmentSpan(string spanTag, string fullHtmlContent)
+    {
+        try
+        {
+            // 支持两种链接格式：
+            // 1. 已购买：href="...mod=attachment..."
+            // 2. 未购买：href="...attachpay..."
+            var linkMatch = Regex.Match(spanTag, @"<a[^>]*href=""([^""]*(?:mod=attachment|attachpay)[^""]*)""[^>]*>([^<]+)</a>", RegexOptions.IgnoreCase | RegexOptions.Singleline);
+
+            if (!linkMatch.Success)
+                return null;
+
+            var downloadUrl = HtmlDecode(linkMatch.Groups[1].Value.Trim());
+            var fileName = HtmlDecode(linkMatch.Groups[2].Value.Trim());
+
+            if (string.IsNullOrEmpty(downloadUrl) || string.IsNullOrEmpty(fileName))
+            {
+                Debug.WriteLine("⚠️ 回帖附件容器解析：缺少下载URL或文件名");
+                return null;
+            }
+
+            //  新增：区分两种附件类型
+            bool isPaidAttachment = downloadUrl.Contains("attachpay");
+
+            // 提取文件大小和下载次数
+            // 已购买：(大小, 下载次数: X)
+            // 未购买：(...下载次数: X, 售价: Y PB币)
+            var sizeMatch = Regex.Match(spanTag, @"\(([^,]+),\s*下载次数:\s*(\d+)", RegexOptions.IgnoreCase);
+            var fileSize = "";
+            var downloadCount = "";
+
+            if (sizeMatch.Success)
+            {
+                fileSize = sizeMatch.Groups[1].Value.Trim();  // e.g., "459.47 KB"
+                downloadCount = sizeMatch.Groups[2].Value.Trim();  // e.g., "19009"
+                Debug.WriteLine($" 回帖附件容器: 文件={fileName}, 大小={fileSize}, 下载={downloadCount}次");
+            }
+
+            // 构建文件大小显示：大小 (下载次数)
+            string fileSizeDisplay = fileSize;
+            if (!string.IsNullOrEmpty(downloadCount))
+            {
+                fileSizeDisplay = $"{fileSize} ({downloadCount}次)";
+            }
+
+            //  新增：从span中提取附件ID，并从隐藏菜单中提取上传时间
+            string? uploadTime = null;
+            string? attachmentId = null;
+            var idMatch = Regex.Match(spanTag, @"id=""attach_(\d+)""", RegexOptions.IgnoreCase);
+            if (idMatch.Success)
+            {
+                attachmentId = idMatch.Groups[1].Value;
+                if (!string.IsNullOrEmpty(fullHtmlContent))
+                {
+                    uploadTime = ExtractReplyUploadTimeFromHiddenMenu(fullHtmlContent, attachmentId);
+                }
+            }
+
+            //  新增：提取销售价格（仅未购买附件）
+            int? salePrice = null;
+            if (isPaidAttachment)
+            {
+                // 格式：售价: 1 PB币 或 售价:1PB币
+                var priceMatch = Regex.Match(spanTag, @"售价:\s*(\d+)\s*PB币", RegexOptions.IgnoreCase);
+                if (priceMatch.Success)
+                {
+                    if (int.TryParse(priceMatch.Groups[1].Value, out int price))
+                    {
+                        salePrice = price;
+                        Debug.WriteLine($" 回帖未购买附件: {fileName}, 售价={price} PB币");
+                    }
+                }
+            }
+
+            return new ContentElement
+            {
+                Type = ContentElementType.Attachment,
+                Url = downloadUrl,
+                FileName = fileName,
+                FileSize = fileSizeDisplay,
+                UploadTime = uploadTime,
+                AttachmentId = attachmentId,
+                SalePrice = salePrice,  //  null = 已购买，> 0 = 未购买
+                HorizontalGroupId = null  //  回帖附件不需要水平分组
+            };
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"❌ 回帖附件容器解析错误: {ex.Message}");
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    ///  新增：从隐藏的附件菜单中提取回帖附件的上传日期
+    /// 查找格式：&lt;div class="y"&gt;2025-12-17 23:18 上传&lt;/div&gt;
+    /// </summary>
+    private string? ExtractReplyUploadTimeFromHiddenMenu(string htmlContent, string attachmentId)
+    {
+        try
+        {
+            // 构建隐藏菜单的ID模式：attach_4238522_menu
+            var menuPattern = $@"<div[^>]*id=""attach_{Regex.Escape(attachmentId)}_menu""[^>]*>.*?<div[^>]*class=""[^""]*\by\b[^""]*""[^>]*>([^<]*上传[^<]*)</div>";
+            var match = Regex.Match(htmlContent, menuPattern, RegexOptions.IgnoreCase | RegexOptions.Singleline);
+
+            if (match.Success)
+            {
+                var uploadTime = match.Groups[1].Value.Trim();
+                // 移除末尾的 "上传" 字符，只保留时间戳
+                uploadTime = Regex.Replace(uploadTime, @"\s*上传\s*$", "", RegexOptions.IgnoreCase).Trim();
+                Debug.WriteLine($" 从隐藏菜单提取回帖上传时间: {uploadTime}");
+                return uploadTime;
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"⚠️ 从隐藏菜单提取回帖上传时间错误: {ex.Message}");
+        }
+
+        return null;
     }
 
     /// <summary>
@@ -576,72 +827,61 @@ public partial class XmlParsingService
     }
 
     /// <summary>
-    ///  新增：创建回帖附件元素
-    /// 参考楼主 CreatePattlAttachmentElement 方法的逻辑
-    /// 支持两种结构：
-    /// 1. 图片附件：<em class="xg1">(大小, 下载次数: 数字)</em>
-    /// 2. 文件附件：<p>大小, 下载次数: 数字</p>
-    /// 上传时间都在隐藏的 tip div 中
+    ///  新增：创建 pattl 格式的回帖附件元素
+    /// 直接使用楼主的 CreatePattlAttachmentElement 逻辑
     /// </summary>
-    private ContentElement? CreateReplyAttachmentElement(string downloadUrl, string attachmentId, string fileName, string ddHtml)
+    private ContentElement? CreateReplyAttachmentElement(string downloadUrl, string attachmentId, string fileName, string ddContent)
     {
         try
         {
-            // 步骤1：提取文件大小和下载次数（支持两种格式）
-            // 格式1：<em class="xg1">(大小, 下载次数: 数字)</em>（图片附件）
-            var infoMatch = Regex.Match(ddHtml, @"<em[^>]*>\s*\(([^,]+),\s*下载次数:\s*(\d+)\)", RegexOptions.IgnoreCase);
+            //  步骤 1：判断链接类型决定是否已购买
+            // 根据URL类型判断：这是帖子内部逻辑的直接应用
+            bool isPaidAttachment = ddContent.Contains("购买");
+            bool canDirectDownload = downloadUrl.Contains("mod=attachment");
+
+            //付费附件需重新匹配URL
+            if (isPaidAttachment)
+            {
+                var linkMatch = Regex.Match(ddContent, @"<a[^>]*href=""([^""]*)""[^>]*>购买</a>", RegexOptions.IgnoreCase | RegexOptions.Singleline);
+                if (linkMatch.Success)
+                {
+                    downloadUrl = HtmlDecode(linkMatch.Groups[1].Value.Trim());
+
+                    var aidMatch = Regex.Match(downloadUrl, @"aid=([^&]+)", RegexOptions.IgnoreCase);
+                    if (aidMatch.Success)
+                    {
+                        attachmentId = aidMatch.Groups[1].Value;
+                    }
+                }
+            }
+
+            Debug.WriteLine($" pattl 附件链接分析: {fileName}, isPaid={isPaidAttachment}, canDownload={canDirectDownload}, URL={downloadUrl.Substring(0, Math.Min(60, downloadUrl.Length))}...");
+
+            //  步骤 2：提取文件大小和下载次数
+            // 真实结构：<p>1.12 KB, 下载次数: 1, 下载积分: PB币 -1 </p>
+            // 注意：必须使用 <p[^>]*> 来正确匹配所有 <p> 标签及其属性
+            // 并使用 [^<]+ 来精确匹配到第一个逗号前的内容，避免跨越多个 <p> 标签
+            var sizeMatch = Regex.Match(ddContent, @"<p[^>]*>\s*([^<,]+?)\s*,\s*下载次数:\s*(\d+)", RegexOptions.IgnoreCase);
 
             var fileSize = "";
             var downloadCount = "";
 
-            if (infoMatch.Success)
+            if (sizeMatch.Success)
             {
-                fileSize = infoMatch.Groups[1].Value.Trim();  // e.g., "39.28 KB"
-                downloadCount = infoMatch.Groups[2].Value.Trim();  // e.g., "1"
-                Debug.WriteLine($" 从<em>标签提取: 文件={fileName}, 大小={fileSize}, 下载={downloadCount}次");
+                fileSize = sizeMatch.Groups[1].Value.Trim();  // e.g., "1.12 KB"
+                downloadCount = sizeMatch.Groups[2].Value.Trim();  // e.g., "1"
+                Debug.WriteLine($" pattl 附件: 文件={fileName}, 大小={fileSize}, 下载={downloadCount}次");
             }
             else
             {
-                // 格式2：<p>大小, 下载次数: 数字</p>（文件附件）
-                var p2Match = Regex.Match(ddHtml, @"<p[^>]*>\s*([^,]+),\s*下载次数:\s*(\d+)", RegexOptions.IgnoreCase);
-                if (p2Match.Success)
+                Debug.WriteLine($"⚠️ 未能从 <p> 标签中提取文件大小，尝试从其他位置...");
+                // 备选方案：尝试从 <em class="xg1"> 提取（以防某些页面有这种格式）
+                var fallbackMatch = Regex.Match(ddContent, @"<em[^>]*class=""[^""]*xg1[^""]*""[^>]*>\s*\(([^,]+),\s*下载次数:\s*(\d+)\)", RegexOptions.IgnoreCase);
+                if (fallbackMatch.Success)
                 {
-                    fileSize = p2Match.Groups[1].Value.Trim();  // e.g., "3.4 MB"
-                    downloadCount = p2Match.Groups[2].Value.Trim();  // e.g., "6"
-                    Debug.WriteLine($" 从<p>标签提取: 文件={fileName}, 大小={fileSize}, 下载={downloadCount}次");
-                }
-                else
-                {
-                    Debug.WriteLine($"⚠️ 未能提取文件大小和下载次数: {fileName}");
-                }
-            }
-
-            // 步骤2：提取上传时间（在隐藏的 tip div 中）
-            // 格式1：<span class="y">日期 上传</span>（图片附件）
-            var uploadTime = "";
-            var timeMatch = Regex.Match(ddHtml, @"<span[^>]*class=""y""[^>]*>([^<]*上传[^<]*)</span>", RegexOptions.IgnoreCase);
-
-            if (timeMatch.Success)
-            {
-                uploadTime = timeMatch.Groups[1].Value.Trim();
-                // 移除末尾的 "上传" 字符，只保留时间戳
-                uploadTime = Regex.Replace(uploadTime, @"\s*上传\s*$", "", RegexOptions.IgnoreCase).Trim();
-                Debug.WriteLine($" 从<span>标签提取上传时间: {uploadTime}");
-            }
-            else
-            {
-                // 格式2：<p class="y">日期 上传</p>（文件附件）
-                var timeMatch2 = Regex.Match(ddHtml, @"<p[^>]*class=""[^""]*y[^""]*""[^>]*>([^<]*上传[^<]*)</p>", RegexOptions.IgnoreCase);
-                if (timeMatch2.Success)
-                {
-                    uploadTime = timeMatch2.Groups[1].Value.Trim();
-                    // 移除末尾的 "上传" 字符，只保留时间戳
-                    uploadTime = Regex.Replace(uploadTime, @"\s*上传\s*$", "", RegexOptions.IgnoreCase).Trim();
-                    Debug.WriteLine($" 从<p class=\"y\">标签提取上传时间: {uploadTime}");
-                }
-                else
-                {
-                    Debug.WriteLine($"⚠️ 未能从隐藏的 tip div 中提取上传时间: {fileName}");
+                    fileSize = fallbackMatch.Groups[1].Value.Trim();
+                    downloadCount = fallbackMatch.Groups[2].Value.Trim();
+                    Debug.WriteLine($" 从备选位置提取: 大小={fileSize}, 下载={downloadCount}次");
                 }
             }
 
@@ -652,25 +892,76 @@ public partial class XmlParsingService
                 fileSizeDisplay = $"{fileSize} ({downloadCount}次)";
             }
 
-            var attachment = new ContentElement
+            //  步骤 3：提取上传时间
+            // 模式：<p class="y">2026-3-27 15:59 上传</p>
+            var uploadTimeMatch = Regex.Match(ddContent, @"<p class=""y"">(.*?) 上传</p>", RegexOptions.IgnoreCase);
+
+            var uploadTime = "";
+            if (uploadTimeMatch.Success)
+            {
+                uploadTime = uploadTimeMatch.Groups[1].Value.Trim();
+                // 移除末尾的 "上传" 字符，只保留时间戳
+                uploadTime = Regex.Replace(uploadTime, @"\s*上传\s*$", "", RegexOptions.IgnoreCase).Trim();
+                Debug.WriteLine($" 提取上传时间: {uploadTime}");
+            }
+            else
+            {
+                Debug.WriteLine($"⚠️ 未能从 <p> 标签中提取上传时间，尝试从其他位置...");
+                // 备选方案：尝试从 <span class="y"> 提取（以防某些页面有这种格式）
+                var fallbackMatch = Regex.Match(ddContent, @"<span class=""y"">(.*?) 上传</span>", RegexOptions.IgnoreCase);
+                if (fallbackMatch.Success)
+                {
+                    uploadTime = fallbackMatch.Groups[1].Value.Trim();
+                    // 移除末尾的 "上传" 字符，只保留时间戳
+                    uploadTime = Regex.Replace(uploadTime, @"\s*上传\s*$", "", RegexOptions.IgnoreCase).Trim();
+                    Debug.WriteLine($" 从备选位置提取上传时间: {uploadTime}");
+                }
+            }
+
+            //  步骤 4：根据链接类型判断是否需要购买
+            // 核心逻辑：与帖子内部逻辑一致
+            int? salePrice = null;
+
+            if (isPaidAttachment)
+            {
+                // 这是购买链接，需要从HTML中提取售价
+                // 模式：售价: <strong>1 PB币</strong> 或 售价: 1 PB币
+                var priceMatch = Regex.Match(ddContent, @"售价:\s*(?:<strong>)?(\d+)(?:</strong>)?\s*PB币", RegexOptions.IgnoreCase);
+                if (priceMatch.Success && int.TryParse(priceMatch.Groups[1].Value, out int price))
+                {
+                    salePrice = price;
+                    Debug.WriteLine($" pattl 付费附件（需要购买）: 文件={fileName}, 售价={price} PB币");
+                }
+                else
+                {
+                    // 如果找不到价格但是有购买链接，默认设为1（防止漏掉付费附件）
+                    salePrice = 1;
+                    Debug.WriteLine($"⚠️ 付费附件但未找到价格，默认=1 PB币: {fileName}");
+                }
+            }
+            else if (canDirectDownload)
+            {
+                // 这是直接下载链接，说明可以下载（无论免费还是已购买）
+                salePrice = null;
+                Debug.WriteLine($" pattl 可下载附件（免费或已购买）: {fileName}");
+            }
+
+            return new ContentElement
             {
                 Type = ContentElementType.Attachment,
-                Text = fileName,
-                FileName = fileName,
                 Url = downloadUrl,
+                FileName = fileName,
                 FileSize = fileSizeDisplay,
                 UploadTime = uploadTime,
                 AttachmentId = attachmentId,
+                SalePrice = salePrice,  //  null = 可下载，> 0 = 需要购买
                 DownloadCount = int.TryParse(downloadCount, out var count) ? count : 0,
                 HorizontalGroupId = null  // 回帖附件不需要横向分组
             };
-
-            Debug.WriteLine($"✅ 创建回帖附件元素: {fileName}, 大小={fileSizeDisplay}, 上传时间={uploadTime}");
-            return attachment;
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"❌ 创建回帖附件元素错误: {ex.Message}");
+            Debug.WriteLine($"❌ 创建 pattl 附件元素错误: {ex.Message}");
             return null;
         }
     }

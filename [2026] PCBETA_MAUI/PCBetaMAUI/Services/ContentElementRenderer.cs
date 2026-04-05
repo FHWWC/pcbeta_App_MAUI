@@ -52,9 +52,12 @@ public static class ContentElementRenderer
         {
             var element = elements[i];
 
+            Debug.WriteLine($"🔍 RenderContentElements - 处理第 {i} 个元素: Type={element.Type}, HorizontalGroupId={element.HorizontalGroupId}, FileName={element.FileName}");
+
             // 如果该元素属于某个分组
             if (element.HorizontalGroupId != null && !renderedGroups.Contains(element.HorizontalGroupId))
             {
+                Debug.WriteLine($"✅ 创建新的横向容器，分组ID={element.HorizontalGroupId}");
                 // 创建新的横向容器并添加该分组的所有文本元素
                 currentHorizontalLayout = new HorizontalStackLayout
                 {
@@ -68,6 +71,7 @@ public static class ContentElementRenderer
                 foreach (var groupElementIndex in groupElementIndices[element.HorizontalGroupId].OrderBy(x => x))
                 {
                     var groupElement = elements[groupElementIndex];
+                    Debug.WriteLine($"  └─ 添加分组内的元素 {groupElementIndex}: {groupElement.FileName}");
                     //  修复：传入 referer 参数
                     var view = ConvertElementToView(groupElement, isHorizontal: true, referer);
                     if (view != null)
@@ -81,6 +85,7 @@ public static class ContentElementRenderer
             // 如果该元素不属于任何分组，则正常渲染它
             else if (element.HorizontalGroupId == null)
             {
+                Debug.WriteLine($"✅ 直接添加元素到容器: {element.FileName}");
                 currentHorizontalLayout = null;
                 //  修复：传入 referer 参数
                 var view = ConvertElementToView(element, isHorizontal: false, referer);
@@ -88,6 +93,10 @@ public static class ContentElementRenderer
                 {
                     container.Add(view);
                 }
+            }
+            else
+            {
+                Debug.WriteLine($"⏭️ 跳过已渲染的分组ID={element.HorizontalGroupId}");
             }
         }
     }
