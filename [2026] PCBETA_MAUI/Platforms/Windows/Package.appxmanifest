@@ -1,0 +1,47 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Package
+  xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
+  xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
+  xmlns:mp="http://schemas.microsoft.com/appx/2014/phone/manifest"
+  xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
+  IgnorableNamespaces="uap rescap">
+
+  <Identity Name="2373HelloStella.PCBETAAPP" Publisher="CN=AFB125EC-1ED2-48B2-A787-EFFE414DD942" Version="1.1.5.0" />
+
+  <mp:PhoneIdentity PhoneProductId="5bd27d71-6634-4fc2-8c22-283ae9fb612b" PhonePublisherId="00000000-0000-0000-0000-000000000000"/>
+
+  <Properties>
+    <DisplayName>PCBETA_APP</DisplayName>
+    <PublisherDisplayName>Hello Stella</PublisherDisplayName>
+    <Logo>Resources\win_app\$placeholder$.png</Logo>
+  </Properties>
+
+  <Dependencies>
+    <TargetDeviceFamily Name="Windows.Universal" MinVersion="10.0.17763.0" MaxVersionTested="10.0.19041.0" />
+    <TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.17763.0" MaxVersionTested="10.0.19041.0" />
+  </Dependencies>
+
+  <Resources>
+    <Resource Language="x-generate" />
+  </Resources>
+
+  <Applications>
+    <Application Id="App" Executable="$targetnametoken$.exe" EntryPoint="$targetentrypoint$">
+      <uap:VisualElements
+        DisplayName="PCBETA_APP"
+        Description="$placeholder$"
+        Square150x150Logo="Resources\win_app\$placeholder$.png"
+        Square44x44Logo="Resources\win_app\$placeholder$.png"
+        BackgroundColor="transparent">
+        <uap:DefaultTile Square71x71Logo="Resources\win_app\logo.png" Wide310x150Logo="Resources\win_app\$placeholder$.png" Square310x310Logo="Resources\win_app\$placeholder$.png" />
+        <uap:LockScreen Notification="badge" BadgeLogo="Resources\win_app\BadgeLogo.png"/>
+        <uap:SplashScreen Image="Resources\Images\pcbeta_logo_full.png"/>
+ </uap:VisualElements>
+    </Application>
+  </Applications>
+
+  <Capabilities>
+    <rescap:Capability Name="runFullTrust" />
+  </Capabilities>
+
+</Package>

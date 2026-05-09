@@ -1,0 +1,51 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="Current" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <IsFirstTimeProjectOpen>False</IsFirstTimeProjectOpen>
+    <ActiveDebugFramework>net10.0-windows10.0.19041.0</ActiveDebugFramework>
+    <ActiveDebugProfile>Windows Machine</ActiveDebugProfile>
+    <SelectedPlatformGroup>PhysicalDevice</SelectedPlatformGroup>
+    <Source>D:\VS 2015-19 Project\PCBetaMAUI\Resources\AppIcon\pcbeta_logo.png</Source>
+    <SmallTileSource>D:\VS 2015-19 Project\PCBetaMAUI\Resources\AppIcon\pcbeta_logo.png</SmallTileSource>
+    <MediumTileSource>D:\VS 2015-19 Project\PCBetaMAUI\Resources\AppIcon\pcbeta_logo.png</MediumTileSource>
+    <AppIconSource>D:\VS 2015-19 Project\PCBetaMAUI\Resources\AppIcon\pcbeta_logo.png</AppIconSource>
+    <BadgeLogoSource>D:\VS 2015-19 Project\PCBetaMAUI\Resources\AppIcon\pcbeta_logo.png</BadgeLogoSource>
+    <PackageLogoSource>D:\VS 2015-19 Project\PCBetaMAUI\Resources\AppIcon\pcbeta_logo.png</PackageLogoSource>
+    <WideTileSource>D:\VS 2015-19 Project\PCBetaMAUI\Resources\AppIcon\pcbeta_logo.png</WideTileSource>
+    <LargeTileSource>D:\VS 2015-19 Project\PCBetaMAUI\Resources\AppIcon\pcbeta_logo.png</LargeTileSource>
+    <SplashScreenSource>D:\VS 2015-19 Project\PCBetaMAUI\Resources\AppIcon\pcbeta_logo.png</SplashScreenSource>
+    <UapAppxPackageBuildMode>StoreAndSideload</UapAppxPackageBuildMode>
+    <AppxShowAllApps>False</AppxShowAllApps>
+    <_LastSelectedProfileId>MSIX-win-x86.pubxml</_LastSelectedProfileId>
+    <PackageOptionalProjectsInIdeBuilds>False</PackageOptionalProjectsInIdeBuilds>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net10.0-android|AnyCPU'">
+    <DebuggerFlavor>ProjectDebugger</DebuggerFlavor>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|net10.0-android|AnyCPU'">
+    <DebuggerFlavor>ProjectDebugger</DebuggerFlavor>
+  </PropertyGroup>
+  <ItemGroup>
+    <None Update="App.xaml">
+      <SubType>Designer</SubType>
+    </None>
+    <None Update="AppShell.xaml">
+      <SubType>Designer</SubType>
+    </None>
+    <None Update="MainPage.xaml">
+      <SubType>Designer</SubType>
+    </None>
+    <None Update="Platforms\Windows\App.xaml">
+      <SubType>Designer</SubType>
+    </None>
+    <None Update="Platforms\Windows\Package.appxmanifest">
+      <SubType>Designer</SubType>
+    </None>
+    <None Update="Resources\Styles\Colors.xaml">
+      <SubType>Designer</SubType>
+    </None>
+    <None Update="Resources\Styles\Styles.xaml">
+      <SubType>Designer</SubType>
+    </None>
+  </ItemGroup>
+</Project>

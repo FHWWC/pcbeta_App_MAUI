@@ -1,0 +1,196 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFrameworks>net10.0-android</TargetFrameworks>
+		<TargetFrameworks Condition="!$([MSBuild]::IsOSPlatform('linux'))">$(TargetFrameworks);net10.0-ios;net10.0-maccatalyst</TargetFrameworks>
+		<TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('windows'))">$(TargetFrameworks);net10.0-windows10.0.19041.0</TargetFrameworks>
+
+		<!-- Note for MacCatalyst:
+		The default runtime is maccatalyst-x64, except in Release config, in which case the default is maccatalyst-x64;maccatalyst-arm64.
+		When specifying both architectures, use the plural <RuntimeIdentifiers> instead of the singular <RuntimeIdentifier>.
+		The Mac App Store will NOT accept apps with ONLY maccatalyst-arm64 indicated;
+		either BOTH runtimes must be indicated or ONLY macatalyst-x64. -->
+		<!-- For example: <RuntimeIdentifiers>maccatalyst-x64;maccatalyst-arm64</RuntimeIdentifiers> -->
+
+		<OutputType>Exe</OutputType>
+		<RootNamespace>PCBetaMAUI</RootNamespace>
+		<UseMaui>true</UseMaui>
+		<SingleProject>true</SingleProject>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+
+		<!-- Enable XAML source generation for faster build times and improved performance.
+		     This generates C# code from XAML at compile time instead of runtime inflation.
+		     To disable, remove this line.
+		     For individual files, you can override by setting Inflator metadata:
+		       <MauiXaml Update="MyPage.xaml" Inflator="Default" /> (reverts to defaults: Runtime for Debug, XamlC for Release)
+		       <MauiXaml Update="MyPage.xaml" Inflator="Runtime" /> (force runtime inflation) -->
+		<MauiXamlInflator>SourceGen</MauiXamlInflator>
+
+		<!-- Display name -->
+		<ApplicationTitle>PCBetaMAUI</ApplicationTitle>
+
+		<!-- App Identifier -->
+		<ApplicationId>com.companyname.pcbetamaui</ApplicationId>
+
+		<!-- Versions -->
+		<ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
+		<ApplicationVersion>1</ApplicationVersion>
+
+		<!-- To develop, package, and publish an app to the Microsoft Store, see: https://aka.ms/MauiTemplateUnpackaged -->
+		<WindowsPackageType>MSIX</WindowsPackageType>
+
+		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">15.0</SupportedOSPlatformVersion>
+		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst'">15.0</SupportedOSPlatformVersion>
+		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">21.0</SupportedOSPlatformVersion>
+		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</SupportedOSPlatformVersion>
+		<TargetPlatformMinVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</TargetPlatformMinVersion>
+		<DefaultLanguage>zh-CN</DefaultLanguage>
+		<GenerateAppInstallerFile>False</GenerateAppInstallerFile>
+		<AppxPackageSigningEnabled>False</AppxPackageSigningEnabled>
+		<AppxPackageSigningTimestampDigestAlgorithm>SHA256</AppxPackageSigningTimestampDigestAlgorithm>
+		<AppxAutoIncrementPackageRevision>True</AppxAutoIncrementPackageRevision>
+		<AppxSymbolPackageEnabled>False</AppxSymbolPackageEnabled>
+		<GenerateTestArtifacts>True</GenerateTestArtifacts>
+		<GenerateTemporaryStoreCertificate>True</GenerateTemporaryStoreCertificate>
+		<HoursBetweenUpdateChecks>0</HoursBetweenUpdateChecks>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|net10.0-android|AnyCPU'">
+	  <AndroidPackageFormat>apk</AndroidPackageFormat>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<!-- App Icon -->
+		<!--
+				<MauiIcon Include="Resources\AppIcon\appicon.svg" ForegroundFile="Resources\AppIcon\appiconfg.svg" Color="#512BD4" />
+		-->
+		<MauiIcon Include="Resources\AppIcon\pcbeta_logo_svg.svg" Color="White" />
+
+		<!-- Splash Screen -->
+		<MauiSplashScreen Include="Resources\AppIcon\pcbeta_logo_full_svg.svg" Color="White" />
+
+		<!-- Images -->
+		<MauiImage Include="Resources\Images\*" />
+		
+		<!-- Custom Fonts -->
+		<MauiFont Include="Resources\Fonts\*" />
+
+		<!-- Raw Assets (also remove the "Resources\Raw" prefix) -->
+		<MauiAsset Include="Resources\Raw\**" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <MauiImage Remove="Resources\Images\pcbeta_logo_full.scale-400.png" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <None Remove="Resources\win_app\%24placeholder%24.scale-400.png" />
+	  <None Remove="Resources\win_app\BadgeLogo.scale-400.png" />
+	  <None Remove="Resources\win_app\logo.scale-100.png" />
+	  <None Remove="Resources\win_app\logo.scale-125.png" />
+	  <None Remove="Resources\win_app\logo.scale-150.png" />
+	  <None Remove="Resources\win_app\logo.scale-200.png" />
+	  <None Remove="Resources\win_app\logo.scale-400.png" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Content Include="Resources\Images\pcbeta_logo_full.scale-400.png" />
+	  <Content Include="Resources\win_app\$placeholder$.scale-400.png" />
+	  <Content Include="Resources\win_app\BadgeLogo.scale-400.png" />
+	  <Content Include="Resources\win_app\logo.scale-100.png" />
+	  <Content Include="Resources\win_app\logo.scale-125.png" />
+	  <Content Include="Resources\win_app\logo.scale-150.png" />
+	  <Content Include="Resources\win_app\logo.scale-200.png" />
+	  <Content Include="Resources\win_app\logo.scale-400.png" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Include="CommunityToolkit.Maui" Version="14.0.1" />
+		<PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.1" />
+		<PackageReference Include="Microsoft.Maui.Controls" Version="10.0.50" />
+		<PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="10.0.5" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <None Include=".github\API-Extension-SubmitEditOPReply.md" />
+	  <None Include=".github\blockquote-br-improvement.md" />
+	  <None Include=".github\blockquote-delivery-checklist.md" />
+	  <None Include=".github\blockquote-final-report.md" />
+	  <None Include=".github\blockquote-implementation-summary.md" />
+	  <None Include=".github\blockquote-parsing-validation.md" />
+	  <None Include=".github\blockquote-quick-reference.md" />
+	  <None Include=".github\blockquote-test-cases.md" />
+	  <None Include=".github\copilot-instructions.md" />
+	  <None Include=".github\DisplayAlert-Usage-Guide.md" />
+	  <None Include=".github\EditButton-Implementation-Summary.md" />
+	  <None Include=".github\EditOPPost-Implementation-Complete.md" />
+	  <None Include=".github\EditOPReply-Final-Summary.md" />
+	  <None Include=".github\EditOPReply-Implementation-Checklist.md" />
+	  <None Include=".github\EditOPReply-Quick-Reference.md" />
+	  <None Include=".github\EditOPReply-Summary.md" />
+	  <None Include=".github\EditReply-File-Manifest.md" />
+	  <None Include=".github\EditReply-Implementation-Summary.md" />
+	  <None Include=".github\EditReply-Quick-Reference.md" />
+	  <None Include=".github\EditReply-Verification-Checklist.md" />
+	  <None Include=".github\fg_533_quick_reference.md" />
+	  <None Include=".github\fg_533_support.md" />
+	  <None Include=".github\InternalLinkNavigation-Implementation.md" />
+	  <None Include=".github\InternalLinkNavigation-QuickRef.md" />
+	  <None Include=".github\InternalLinkNavigation-Summary.md" />
+	  <None Include=".github\InternalLinkNavigation-TestCases.md" />
+	  <None Include=".github\MainThreadPage-ExpandCollapse-Implementation.md" />
+	  <None Include=".github\MainThreadPage-ExpandCollapse-QuickRef.md" />
+	  <None Include=".github\MyNoticePage-Implementation.md" />
+	  <None Include=".github\MyNoticePage-QuickRef.md" />
+	  <None Include=".github\MyProfilePage-Implementation.md" />
+	  <None Include=".github\PostNewThread-10-Parameters-Implementation.md" />
+	  <None Include=".github\PostNewThread-API-Implementation.md" />
+	  <None Include=".github\PostNewThread-Attachment-UI-Completion.md" />
+	  <None Include=".github\PostNewThread-Attachment-UI-Final-Report.md" />
+	  <None Include=".github\PostNewThread-Attachment-UI-Quick-Ref.md" />
+	  <None Include=".github\PostNewThread-Complete-Summary.md" />
+	  <None Include=".github\PostNewThread-Extra-Parameters-Integration.md" />
+	  <None Include=".github\PostNewThread-Final-Report.md" />
+	  <None Include=".github\PostNewThread-Implementation-Checklist.md" />
+	  <None Include=".github\PostNewThread-Implementation.md" />
+	  <None Include=".github\PostNewThread-Quick-Reference.md" />
+	  <None Include=".github\PostNewThread-TypeId-Dynamic-Support.md" />
+	  <None Include=".github\PostNewThread-TypeId-Implementation-Checklist.md" />
+	  <None Include=".github\PostNewThread-TypeId-Quick-Reference.md" />
+	  <None Include=".github\Quote-Blockquote-Implementation-Guide.md" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Folder Include="Tests\" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <MauiImage Include="Resources\AppIcon\pcbeta_logo.png" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <MauiXaml Update="Views\EditOPReplyPage.xaml">
+	    <Generator>MSBuild:Compile</Generator>
+	  </MauiXaml>
+	  <MauiXaml Update="Views\EditReplyPage.xaml">
+	    <Generator>MSBuild:Compile</Generator>
+	  </MauiXaml>
+	  <MauiXaml Update="Views\MyNoticePage.xaml">
+	    <Generator>MSBuild:Compile</Generator>
+	  </MauiXaml>
+	  <MauiXaml Update="Views\MyProfilePage.xaml">
+	    <Generator>MSBuild:Compile</Generator>
+	  </MauiXaml>
+	  <MauiXaml Update="Views\PostNewThreadPage.xaml">
+	    <Generator>MSBuild:Compile</Generator>
+	  </MauiXaml>
+	  <MauiXaml Update="Views\ReplyThreadPage.xaml">
+	    <Generator>MSBuild:Compile</Generator>
+	  </MauiXaml>
+	  <MauiXaml Update="Views\SearchPage.xaml">
+	    <Generator>MSBuild:Compile</Generator>
+	  </MauiXaml>
+	</ItemGroup>
+
+</Project>
