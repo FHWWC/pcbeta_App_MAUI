@@ -1,0 +1,476 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:PCBetaMAUI.ViewModels"
+             xmlns:models="clr-namespace:PCBetaMAUI.Models"
+             xmlns:converters="clr-namespace:PCBetaMAUI.Converters"
+             x:Class="PCBetaMAUI.Views.EditOPReplyPage"
+             Title="编辑楼主发帖"
+             BackgroundColor="{AppThemeBinding Light=#FFFFFF, Dark=#1F1F1F}">
+
+    <!-- 绑定 EditOPReplyViewModel -->
+    <ContentPage.BindingContext>
+        <vm:EditOPReplyViewModel/>
+    </ContentPage.BindingContext>
+
+    <ContentPage.Resources>
+        <ResourceDictionary>
+            <!-- 删除按钮样式 -->
+            <Style x:Key="DeleteButtonStyle" TargetType="Button">
+                <Setter Property="BackgroundColor" Value="#FF4444"/>
+                <Setter Property="TextColor" Value="White"/>
+                <Setter Property="Padding" Value="8,4"/>
+                <Setter Property="FontSize" Value="12"/>
+            </Style>
+
+            <!-- 操作按钮样式 -->
+            <Style x:Key="ActionButtonStyle" TargetType="Button">
+                <Setter Property="BackgroundColor" Value="#007AFF"/>
+                <Setter Property="TextColor" Value="White"/>
+                <Setter Property="Padding" Value="16,12"/>
+                <Setter Property="FontSize" Value="14"/>
+                <Setter Property="Margin" Value="0,0,8,0"/>
+            </Style>
+
+            <!-- 字符串相等比较 Converter -->
+            <converters:StringEqualsConverter x:Key="StringEqualsConverter"/>
+            <!-- 反向布尔 Converter -->
+            <converters:InvertedBoolConverter x:Key="InvertedBoolConverter"/>
+        </ResourceDictionary>
+    </ContentPage.Resources>
+
+    <!-- 加载指示器 -->
+    <Grid RowDefinitions="*,Auto" Padding="0">
+        <!-- 加载中提示 -->
+        <VerticalStackLayout Grid.Row="0" 
+                            HorizontalOptions="Center" 
+                            VerticalOptions="Center"
+                            Spacing="16"
+                            Padding="16"
+                            IsVisible="{Binding IsLoading}">
+            <Label Text="加载中..." FontSize="18" FontAttributes="Bold" HorizontalTextAlignment="Center"/>
+            <ActivityIndicator IsRunning="{Binding IsLoading}" IsVisible="{Binding IsLoading}"/>
+        </VerticalStackLayout>
+
+        <!-- 主内容区 -->
+        <ScrollView Grid.Row="0" IsVisible="{Binding IsLoading, Converter={StaticResource InvertedBoolConverter}}">
+            <VerticalStackLayout Padding="16" Spacing="16">
+                <!-- 编辑版块信息 -->
+                <Frame BorderColor="{AppThemeBinding Light=#E0E0E0, Dark=#3F3F3F}" 
+                       CornerRadius="8" 
+                       Padding="12" 
+                       HasShadow="False">
+                    <VerticalStackLayout Spacing="8">
+                        <Label Text="✏️ 编辑楼主发帖" 
+                               FontSize="14" 
+                               FontAttributes="Bold"
+                               TextColor="#FF9500"/>
+                        <Label Text="{Binding BoardName}" 
+                               FontSize="16" 
+                               FontAttributes="Bold"
+                               LineBreakMode="TailTruncation"
+                               MaxLines="2"/>
+                        <Label Text="{Binding ThreadTitle, StringFormat='标题: {0}'}" 
+                               FontSize="12" 
+                               TextColor="{AppThemeBinding Light=#666666, Dark=#AAAAAA}"
+                               LineBreakMode="TailTruncation"
+                               MaxLines="2"/>
+                    </VerticalStackLayout>
+                </Frame>
+
+                <!-- 主题分类选择区 -->
+                <VerticalStackLayout Spacing="8">
+                    <Label Text="主题分类" FontSize="14" FontAttributes="Bold"/>
+                    <Picker x:Name="TypeIdPicker"
+                            Title="选择主题分类"
+                            TextColor="{AppThemeBinding Light=#000000, Dark=#FFFFFF}"
+                            BackgroundColor="{AppThemeBinding Light=#F5F5F5, Dark=#2F2F2F}"
+                            TitleColor="{AppThemeBinding Light=#999999, Dark=#AAAAAA}"
+                            FontSize="14"
+                            SelectedIndexChanged="OnTypeIdPickerSelectedIndexChanged"/>
+                    <Label Text="⚠️ 请选择一个主题分类" 
+                           FontSize="11" 
+                           TextColor="#FF6B6B"
+                           IsVisible="{Binding SelectedTypeId, Converter={StaticResource StringEqualsConverter}, ConverterParameter=0}"/>
+                </VerticalStackLayout>
+                
+                <!-- 帖子标题输入区 -->
+                <VerticalStackLayout Spacing="8">
+                    <Label Text="帖子标题" FontSize="14" FontAttributes="Bold"/>
+                    <Entry x:Name="ThreadTitleEntry"
+                           Text="{Binding ThreadTitle}"
+                           Placeholder="请输入帖子标题（必填）"
+                           BackgroundColor="{AppThemeBinding Light=#F5F5F5, Dark=#2F2F2F}"
+                           TextColor="{AppThemeBinding Light=#000000, Dark=#FFFFFF}"
+                           PlaceholderColor="{AppThemeBinding Light=#999999, Dark=#666666}"
+                           FontSize="14"/>
+                    <Label Text="{Binding ThreadTitleCharCount, StringFormat='已输入: {0} 字符'}" 
+                           FontSize="12" 
+                           TextColor="{AppThemeBinding Light=#999999, Dark=#AAAAAA}"/>
+                </VerticalStackLayout>
+
+                <!-- 帖子内容编辑区 -->
+                <VerticalStackLayout Spacing="8">
+                    <Label Text="帖子内容" FontSize="14" FontAttributes="Bold"/>
+                    <Editor x:Name="PostContentEditor"
+                            Text="{Binding PostContent}"
+                            Placeholder="请输入帖子内容（至少8个字符）"
+                            HeightRequest="200"
+                            BackgroundColor="{AppThemeBinding Light=#F5F5F5, Dark=#2F2F2F}"
+                            TextColor="{AppThemeBinding Light=#000000, Dark=#FFFFFF}"
+                            PlaceholderColor="{AppThemeBinding Light=#999999, Dark=#666666}"/>
+                    <Label Text="{Binding CharacterCount, StringFormat='已输入: {0} 字符'}" 
+                           FontSize="12" 
+                           TextColor="{AppThemeBinding Light=#999999, Dark=#AAAAAA}"/>
+                </VerticalStackLayout>
+
+                <!-- ✅ 发帖参数区块（回帖选项、权限与奖励） -->
+                <Frame BorderColor="{AppThemeBinding Light=#E0E0E0, Dark=#3F3F3F}" 
+                       CornerRadius="8" 
+                       Padding="12" 
+                       HasShadow="False">
+                    <VerticalStackLayout Spacing="12">
+                        <!-- 回帖选项（4个复选框） -->
+                        <VerticalStackLayout Spacing="8">
+                            <Label Text="回帖选项" FontSize="14" FontAttributes="Bold"/>
+                            <Grid ColumnDefinitions="*,*" RowDefinitions="25,25" ColumnSpacing="16" RowSpacing="8">
+                                <!-- 复选框 1: 回帖仅作者可见 -->
+                                <HorizontalStackLayout Grid.Row="0" Grid.Column="0" Spacing="8" VerticalOptions="Center">
+                                    <CheckBox IsChecked="{Binding Hiddenreplies}" VerticalOptions="Center"/>
+                                    <Label Text="仅作者可见" FontSize="13" VerticalOptions="Center"/>
+                                </HorizontalStackLayout>
+
+                                <!-- 复选框 2: 回帖倒序排列 -->
+                                <HorizontalStackLayout Grid.Row="0" Grid.Column="1" Spacing="8" VerticalOptions="Center">
+                                    <CheckBox IsChecked="{Binding Ordertype}" VerticalOptions="Center"/>
+                                    <Label Text="倒序排列" FontSize="13" VerticalOptions="Center"/>
+                                </HorizontalStackLayout>
+
+                                <!-- 复选框 3: 接收回复通知 -->
+                                <HorizontalStackLayout Grid.Row="1" Grid.Column="0" Spacing="8" VerticalOptions="Center">
+                                    <CheckBox IsChecked="{Binding Allownoticeauthor}" VerticalOptions="Center"/>
+                                    <Label Text="接收通知" FontSize="13" VerticalOptions="Center"/>
+                                </HorizontalStackLayout>
+
+                                <!-- 复选框 4: 使用个人签名 -->
+                                <HorizontalStackLayout Grid.Row="1" Grid.Column="1" Spacing="8" VerticalOptions="Center">
+                                    <CheckBox IsChecked="{Binding Usesig}" VerticalOptions="Center"/>
+                                    <Label Text="使用签名" FontSize="13" VerticalOptions="Center"/>
+                                </HorizontalStackLayout>
+                            </Grid>
+                        </VerticalStackLayout>
+
+                        <BoxView Color="{AppThemeBinding Light=Black, Dark=#3F3F3F}" HeightRequest="1"/>
+
+                        <!-- 权限与奖励设置 -->
+                        <VerticalStackLayout Spacing="12">
+                            <!-- 阅读权限 -->
+                            <VerticalStackLayout Spacing="4">
+                                <Label Text="阅读权限" FontSize="13" FontAttributes="Bold"/>
+                                <Picker x:Name="ReadpermPicker"
+                                        Title="选择阅读权限"
+                                        TextColor="{AppThemeBinding Light=#000000, Dark=#FFFFFF}"
+                                        BackgroundColor="{AppThemeBinding Light=#F5F5F5, Dark=#2F2F2F}"
+                                        TitleColor="{AppThemeBinding Light=#999999, Dark=#AAAAAA}"
+                                        FontSize="13"
+                                        SelectedIndexChanged="OnReadpermPickerSelectedIndexChanged"/>
+                            </VerticalStackLayout>
+                            
+                            <BoxView Color="{AppThemeBinding Light=Black, Dark=#3F3F3F}" HeightRequest="1"/>
+
+                            <!-- 回帖奖励参数 -->
+                            <VerticalStackLayout Spacing="4">
+                                <Label Text="回帖奖励" FontSize="13" FontAttributes="Bold"/>
+                                <Label Text="单份奖多少PB币" FontSize="12"/>
+                                <Entry x:Name="ReplycreditExtcreditsEntry"
+                                       Text="{Binding ReplycreditExtcredits}"
+                                       Placeholder="请输入奖励数"
+                                       Keyboard="Numeric"
+                                       BackgroundColor="{AppThemeBinding Light=#F5F5F5, Dark=#2F2F2F}"
+                                       TextColor="{AppThemeBinding Light=#000000, Dark=#FFFFFF}"
+                                       PlaceholderColor="{AppThemeBinding Light=#999999, Dark=#666666}"
+                                       FontSize="13"/>
+                            </VerticalStackLayout>
+
+                            <!-- 总奖励次数 -->
+                            <VerticalStackLayout Spacing="4">
+                                <Label Text="总共多少份奖励" FontSize="12"/>
+                                <Entry x:Name="ReplycreditTimesEntry"
+                                       Text="{Binding ReplycreditTimes}"
+                                       Placeholder="请输入次数"
+                                       Keyboard="Numeric"
+                                       BackgroundColor="{AppThemeBinding Light=#F5F5F5, Dark=#2F2F2F}"
+                                       TextColor="{AppThemeBinding Light=#000000, Dark=#FFFFFF}"
+                                       PlaceholderColor="{AppThemeBinding Light=#999999, Dark=#666666}"
+                                       FontSize="13"/>
+                            </VerticalStackLayout>
+                            
+                            <!-- 每人最多可获得 -->
+                            <VerticalStackLayout Spacing="4">
+                                <Label Text="每人最多可得几次" FontSize="12"/>
+                                <Picker x:Name="ReplycreditMembertimesPicker"
+                                        Title="选择次数"
+                                        TextColor="{AppThemeBinding Light=#000000, Dark=#FFFFFF}"
+                                        BackgroundColor="{AppThemeBinding Light=#F5F5F5, Dark=#2F2F2F}"
+                                        TitleColor="{AppThemeBinding Light=#999999, Dark=#AAAAAA}"
+                                        FontSize="13"
+                                        SelectedIndexChanged="OnReplycreditMembertimesPickerSelectedIndexChanged"/>
+                            </VerticalStackLayout>
+
+                            <!-- 中奖率 -->
+                            <VerticalStackLayout Spacing="4">
+                                <Label Text="中奖率（%）" FontSize="12"/>
+                                <Picker x:Name="ReplycreditRandomPicker"
+                                        Title="选择中奖率"
+                                        TextColor="{AppThemeBinding Light=#000000, Dark=#FFFFFF}"
+                                        BackgroundColor="{AppThemeBinding Light=#F5F5F5, Dark=#2F2F2F}"
+                                        TitleColor="{AppThemeBinding Light=#999999, Dark=#AAAAAA}"
+                                        FontSize="13"
+                                        SelectedIndexChanged="OnReplycreditRandomPickerSelectedIndexChanged"/>
+                            </VerticalStackLayout>
+
+                            <BoxView Color="{AppThemeBinding Light=Black, Dark=#3F3F3F}" HeightRequest="1"/>
+
+                            <!-- 主题售价 -->
+                            <VerticalStackLayout Spacing="4">
+                                <Label Text="主题售价（最高5）" FontSize="13" FontAttributes="Bold"/>
+                                <Entry x:Name="PriceEntry"
+                                       Text="{Binding Price}"
+                                       Placeholder="请输入售价（0-5）"
+                                       Keyboard="Numeric"
+                                       BackgroundColor="{AppThemeBinding Light=#F5F5F5, Dark=#2F2F2F}"
+                                       TextColor="{AppThemeBinding Light=#000000, Dark=#FFFFFF}"
+                                       PlaceholderColor="{AppThemeBinding Light=#999999, Dark=#666666}"
+                                       FontSize="13"/>
+                            </VerticalStackLayout>
+                        </VerticalStackLayout>
+                    </VerticalStackLayout>
+                </Frame>
+
+                <!-- 图片上传区 -->
+                <VerticalStackLayout Spacing="8">
+                    <Label Text="上传图片" FontSize="14" FontAttributes="Bold"/>
+                    <Button Text="选择图片" 
+                            Command="{Binding PickImageCommand}"
+                            Style="{StaticResource ActionButtonStyle}"/>
+                    
+                    <!-- 已上传的图片列表 -->
+                    <CollectionView ItemsSource="{Binding UploadedImages}" 
+                                   SelectionMode="None"
+                                   Margin="0">
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate>
+                                <VerticalStackLayout Spacing="8" Margin="0,4">
+                                    <!-- 图片基本信息卡片 -->
+                                    <Frame BorderColor="{AppThemeBinding Light=#E0E0E0, Dark=#3F3F3F}"
+                                           CornerRadius="6"
+                                           Padding="8"
+                                           HasShadow="False">
+                                        <HorizontalStackLayout Spacing="8" VerticalOptions="Center">
+                                            <!-- 图片缩略图 -->
+                                            <Image Source="{Binding LocalPath}"
+                                                   WidthRequest="60"
+                                                   HeightRequest="60"
+                                                   Aspect="AspectFill"/>
+
+                                            <!-- 图片信息 -->
+                                            <VerticalStackLayout Spacing="4" HorizontalOptions="FillAndExpand">
+                                                <Label Text="{Binding FileName}" 
+                                                       FontSize="12" 
+                                                       FontAttributes="Bold"
+                                                       LineBreakMode="TailTruncation"/>
+                                                <Label Text="{Binding FileSize, StringFormat='大小: {0}'}" 
+                                                       FontSize="11"
+                                                       TextColor="{AppThemeBinding Light=#999999, Dark=#AAAAAA}"/>
+                                                <Label Text="{Binding StatusText}" 
+                                                       FontSize="10"
+                                                       TextColor="{Binding StatusColor}"/>
+                                            </VerticalStackLayout>
+
+                                            <!-- 操作按钮区 -->
+                                            <HorizontalStackLayout Spacing="4">
+                                                <!-- 插入按钮 -->
+                                                <Button Text="插入" 
+                                                        Command="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.InsertImageCommand}"
+                                                        CommandParameter="{Binding .}"
+                                                        BackgroundColor="#34C759"
+                                                        TextColor="White"
+                                                        Padding="6,4"
+                                                        FontSize="11"
+                                                        WidthRequest="45"/>
+
+                                                <!-- 删除按钮 -->
+                                                <Button Text="删除" 
+                                                        Command="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.DeleteImageCommand}"
+                                                        CommandParameter="{Binding .}"
+                                                        Style="{StaticResource DeleteButtonStyle}"
+                                                        WidthRequest="45"
+                                                        Padding="0"/>
+                                            </HorizontalStackLayout>
+                                        </HorizontalStackLayout>
+                                    </Frame>
+
+                                    <!-- 附件元数据输入区域 -->
+                                    <Frame BorderColor="{AppThemeBinding Light=#F0F0F0, Dark=#2F2F2F}"
+                                           CornerRadius="6"
+                                           Padding="12"
+                                           HasShadow="False"
+                                           BackgroundColor="{AppThemeBinding Light=#FAFAFA, Dark=#282828}">
+                                        <VerticalStackLayout Spacing="8">
+                                            <VerticalStackLayout Spacing="4">
+                                                <Label Text="📝 附件描述（可选）" 
+                                                       FontSize="12" 
+                                                       FontAttributes="Bold"/>
+                                                <Entry Text="{Binding Description, Mode=TwoWay}" 
+                                                       Placeholder="输入此附件的描述信息"
+                                                       BackgroundColor="{AppThemeBinding Light=#FFFFFF, Dark=#3F3F3F}"
+                                                       TextColor="{AppThemeBinding Light=#000000, Dark=#FFFFFF}"
+                                                       PlaceholderColor="{AppThemeBinding Light=#999999, Dark=#666666}"
+                                                       FontSize="12"/>
+                                            </VerticalStackLayout>
+                                        </VerticalStackLayout>
+                                    </Frame>
+                                </VerticalStackLayout>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+                </VerticalStackLayout>
+
+                <!-- 附件上传区 -->
+                <VerticalStackLayout Spacing="8">
+                    <Label Text="上传附件" FontSize="14" FontAttributes="Bold"/>
+                    <Button Text="选择附件" 
+                            Command="{Binding PickAttachmentCommand}"
+                            Style="{StaticResource ActionButtonStyle}"/>
+                    
+                    <!-- 已上传的附件列表 -->
+                    <CollectionView ItemsSource="{Binding UploadedAttachments}" 
+                                   SelectionMode="None"
+                                   Margin="0">
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate>
+                                <VerticalStackLayout Spacing="8" Margin="0,4">
+                                    <!-- 附件基本信息卡片 -->
+                                    <Frame BorderColor="{AppThemeBinding Light=#E0E0E0, Dark=#3F3F3F}"
+                                           CornerRadius="6"
+                                           Padding="8"
+                                           HasShadow="False">
+                                        <HorizontalStackLayout Spacing="8" VerticalOptions="Center">
+                                            <!-- 附件图标 -->
+                                            <Label Text="📎" FontSize="24" WidthRequest="40"/>
+
+                                            <!-- 附件信息 -->
+                                            <VerticalStackLayout Spacing="4" HorizontalOptions="FillAndExpand">
+                                                <Label Text="{Binding FileName}" 
+                                                       FontSize="12" 
+                                                       FontAttributes="Bold"
+                                                       LineBreakMode="TailTruncation"/>
+                                                <Label Text="{Binding FileSize, StringFormat='大小: {0}'}" 
+                                                       FontSize="11"
+                                                       TextColor="{AppThemeBinding Light=#999999, Dark=#AAAAAA}"/>
+                                                <Label Text="{Binding StatusText}" 
+                                                       FontSize="10"
+                                                       TextColor="{Binding StatusColor}"/>
+                                            </VerticalStackLayout>
+
+                                            <!-- 操作按钮区 -->
+                                            <HorizontalStackLayout Spacing="4">
+                                                <!-- 插入按钮 -->
+                                                <Button Text="插入" 
+                                                        Command="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.InsertAttachmentCommand}"
+                                                        CommandParameter="{Binding .}"
+                                                        BackgroundColor="#34C759"
+                                                        TextColor="White"
+                                                        Padding="6,4"
+                                                        FontSize="11"
+                                                        WidthRequest="45"/>
+
+                                                <!-- 删除按钮 -->
+                                                <Button Text="删除" 
+                                                        Command="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.DeleteAttachmentCommand}"
+                                                        CommandParameter="{Binding .}"
+                                                        Style="{StaticResource DeleteButtonStyle}"
+                                                        WidthRequest="45"
+                                                        Padding="0"/>
+                                            </HorizontalStackLayout>
+                                        </HorizontalStackLayout>
+                                    </Frame>
+
+                                    <!-- 附件元数据输入区域 -->
+                                    <Frame BorderColor="{AppThemeBinding Light=#F0F0F0, Dark=#2F2F2F}"
+                                           CornerRadius="6"
+                                           Padding="12"
+                                           HasShadow="False"
+                                           BackgroundColor="{AppThemeBinding Light=#FAFAFA, Dark=#282828}">
+                                        <VerticalStackLayout Spacing="8">
+                                            <!-- 附件描述 -->
+                                            <VerticalStackLayout Spacing="4">
+                                                <Label Text="📝 附件描述（可选）" 
+                                                       FontSize="12" 
+                                                       FontAttributes="Bold"/>
+                                                <Entry Text="{Binding Description, Mode=TwoWay}" 
+                                                       Placeholder="输入此附件的描述信息"
+                                                       BackgroundColor="{AppThemeBinding Light=#FFFFFF, Dark=#3F3F3F}"
+                                                       TextColor="{AppThemeBinding Light=#000000, Dark=#FFFFFF}"
+                                                       PlaceholderColor="{AppThemeBinding Light=#999999, Dark=#666666}"
+                                                       FontSize="12"/>
+                                            </VerticalStackLayout>
+
+                                            <!-- 阅读权限 -->
+                                            <VerticalStackLayout Spacing="4">
+                                                <Label Text="🔐 阅读权限" 
+                                                       FontSize="12" 
+                                                       FontAttributes="Bold"/>
+                                                <Picker SelectedItem="{Binding SelectedPermission, Mode=TwoWay}"
+                                                        ItemsSource="{x:Static models:AttachmentPermissionLevel.PermissionOptions}"
+                                                        ItemDisplayBinding="{Binding Display}"
+                                                        BackgroundColor="{AppThemeBinding Light=#FFFFFF, Dark=#3F3F3F}"
+                                                        TextColor="{AppThemeBinding Light=#000000, Dark=#FFFFFF}"
+                                                        Title="选择权限"
+                                                        FontSize="12"/>
+                                            </VerticalStackLayout>
+
+                                            <!-- 售价 -->
+                                            <VerticalStackLayout Spacing="4">
+                                                <Label Text="💰 售价（金币，0为免费）" 
+                                                       FontSize="12" 
+                                                       FontAttributes="Bold"/>
+                                                <Entry Text="{Binding Price, Mode=TwoWay}" 
+                                                       Placeholder="0"
+                                                       Keyboard="Numeric"
+                                                       BackgroundColor="{AppThemeBinding Light=#FFFFFF, Dark=#3F3F3F}"
+                                                       TextColor="{AppThemeBinding Light=#000000, Dark=#FFFFFF}"
+                                                       PlaceholderColor="{AppThemeBinding Light=#999999, Dark=#666666}"
+                                                       FontSize="12"/>
+                                            </VerticalStackLayout>
+                                        </VerticalStackLayout>
+                                    </Frame>
+                                </VerticalStackLayout>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+                </VerticalStackLayout>
+
+                <!-- 提交和取消按钮 -->
+                <HorizontalStackLayout Spacing="12" Margin="0,16">
+                    <Button Text="更新发帖" 
+                            Command="{Binding SubmitEditCommand}"
+                            IsEnabled="{Binding IsSubmitEnabled}"
+                            BackgroundColor="#FF9500"
+                            TextColor="White"
+                            Padding="16,12"
+                            FontSize="14"
+                            FontAttributes="Bold"
+                            HorizontalOptions="FillAndExpand"/>
+                    <Button Text="取消" 
+                            Command="{Binding CancelCommand}"
+                            BackgroundColor="#999999"
+                            TextColor="White"
+                            Padding="16,12"
+                            FontSize="14"
+                            HorizontalOptions="FillAndExpand"/>
+                </HorizontalStackLayout>
+            </VerticalStackLayout>
+        </ScrollView>
+    </Grid>
+</ContentPage>

@@ -1,0 +1,165 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="PCBetaMAUI.Views.MyNoticePage"
+             Title="我的通知"
+             Shell.NavBarIsVisible="True"
+             BackgroundColor="{AppThemeBinding Light=#FFFFFF, Dark=#1e1e1e}">
+
+    <Grid RowDefinitions="Auto,*,Auto" Padding="0">
+        <!-- 顶部工具栏 -->
+        <StackLayout Grid.Row="0" Padding="16,12" Spacing="12" BackgroundColor="{AppThemeBinding Light=#F5F5F5, Dark=#2d2d2d}">
+            <!-- 刷新和分页按钮 -->
+            <HorizontalStackLayout Spacing="8" HorizontalOptions="FillAndExpand">
+                <Button Text="刷新" 
+                        Command="{Binding RefreshCommand}"
+                        IsEnabled="{Binding IsLoading, Converter={StaticResource InvertedBoolConverter}}"
+                        Padding="12,8"
+                        FontSize="14"
+                        CornerRadius="4"
+                        BackgroundColor="{AppThemeBinding Light=#007AFF, Dark=#0A84FF}" />
+                
+                <Button Text="上一页" 
+                        Command="{Binding GoToPreviousPageCommand}"
+                        IsEnabled="{Binding CanGoToPreviousPage}"
+                        Padding="12,8"
+                        FontSize="14"
+                        CornerRadius="4"
+                        BackgroundColor="{AppThemeBinding Light=#34C759, Dark=#32AE5E}" />
+                
+                <Button Text="下一页" 
+                        Command="{Binding GoToNextPageCommand}"
+                        IsEnabled="{Binding CanGoToNextPage}"
+                        Padding="12,8"
+                        FontSize="14"
+                        CornerRadius="4"
+                        BackgroundColor="{AppThemeBinding Light=#34C759, Dark=#32AE5E}" />
+            </HorizontalStackLayout>
+
+            <!-- 页码显示 -->
+            <Label Text="{Binding CurrentPage, StringFormat='第 {0} 页'}"
+                   FontSize="13"
+                   Opacity="0.7"
+                   TextColor="{AppThemeBinding Light=#666666, Dark=#CCCCCC}" />
+        </StackLayout>
+
+        <!-- 主要内容区域 -->
+        <ScrollView Grid.Row="1" BackgroundColor="{AppThemeBinding Light=#FFFFFF, Dark=#1e1e1e}">
+            <StackLayout Spacing="0" Padding="0">
+                <!-- 加载中提示 -->
+                <StackLayout IsVisible="{Binding IsLoading}" 
+                             HorizontalOptions="FillAndExpand" 
+                             VerticalOptions="CenterAndExpand" 
+                             Padding="20">
+                    <ActivityIndicator IsRunning="True" 
+                                      Color="{AppThemeBinding Light=#007AFF, Dark=#0A84FF}"
+                                      Scale="1.5" />
+                    <Label Text="加载中..." 
+                           HorizontalTextAlignment="Center" 
+                           Margin="0,12,0,0"
+                           TextColor="{AppThemeBinding Light=#666666, Dark=#CCCCCC}" />
+                </StackLayout>
+
+                <!-- 错误提示 -->
+                <StackLayout IsVisible="{Binding ErrorMessage, Converter={StaticResource StringNotEqualZeroConverter}}" 
+                             Padding="16" 
+                             Spacing="8">
+                    <Label Text="⚠️ 错误" 
+                           FontSize="16" 
+                           FontAttributes="Bold"
+                           TextColor="{AppThemeBinding Light=#FF3B30, Dark=#FF453A}" />
+                    <Label Text="{Binding ErrorMessage}" 
+                           TextColor="{AppThemeBinding Light=#FF3B30, Dark=#FF453A}"
+                           LineBreakMode="WordWrap" />
+                </StackLayout>
+
+                <!-- 无通知提示 -->
+                <StackLayout IsVisible="{Binding HasNotices, Converter={StaticResource InvertedBoolConverter}}"
+                             HorizontalOptions="FillAndExpand"
+                             VerticalOptions="CenterAndExpand"
+                             Padding="20">
+                    <Label Text="😴"
+                           FontSize="48"
+                           HorizontalTextAlignment="Center" />
+                    <Label Text="暂无通知"
+                           FontSize="16"
+                           HorizontalTextAlignment="Center"
+                           Margin="0,12,0,0"
+                           TextColor="{AppThemeBinding Light=#999999, Dark=#999999}" />
+                </StackLayout>
+
+                <!-- 通知列表 -->
+                <CollectionView ItemsSource="{Binding Notices}"
+                               SelectionMode="Single"
+                               x:Name="NoticesCollectionView"
+                               SelectionChanged="OnNoticeSelected">
+                    <CollectionView.ItemTemplate>
+                        <DataTemplate>
+                            <!-- 通知项 -->
+                            <StackLayout Padding="16,12" 
+                                        Spacing="12"
+                                        BackgroundColor="{AppThemeBinding Light=#FFFFFF, Dark=#2d2d2d}"
+                                        Margin="0,0,0,1">
+                                <!-- 顶部：头像 + 日期 -->
+                                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+                                    <!-- 用户头像 -->
+                                    <Image Grid.Column="0"
+                                           Source="{Binding AvatarUrl}"
+                                           Aspect="AspectFill"
+                                           WidthRequest="48"
+                                           HeightRequest="48" />
+
+                                    <!-- 中间内容（标题区域） -->
+                                    <StackLayout Grid.Column="1" 
+                                                VerticalOptions="Center" 
+                                                Spacing="4">
+                                        <!-- 消息类型标记 -->
+                                        <Label FontSize="13" 
+                                              TextColor="{AppThemeBinding Light=DodgerBlue, Dark=#EEEEEE}"
+                                              LineBreakMode="TailTruncation" Text="{Binding UserName}"/>
+                                        <Label FontSize="13" 
+                                              TextColor="{AppThemeBinding Light=DodgerBlue, Dark=#EEEEEE}"
+                                              LineBreakMode="TailTruncation" Text="{Binding ThreadTitle}"/>
+                                    </StackLayout>
+
+                                    <!-- 右边：日期 -->
+                                    <Label Grid.Column="2"
+                                          Text="{Binding NoticeTime}"
+                                          FontSize="12"
+                                          VerticalOptions="Start"
+                                          TextColor="{AppThemeBinding Light=Black, Dark=#AAAAAA}" />
+                                </Grid>
+
+                                <!-- 消息内容 -->
+                                <Label Text="{Binding NoticeText}"
+                                      FontSize="14"
+                                      LineBreakMode="WordWrap"
+                                      TextColor="{AppThemeBinding Light=#333333, Dark=#DDDDDD}"
+                                      Margin="0,4,0,0" />
+
+                                <!-- 如果有线程链接，显示点击提示 -->
+                                <Label IsVisible="{Binding HasThreadLink}"
+                                      Text="💬 点击查看相关帖子"
+                                      FontSize="12"
+                                      TextColor="{AppThemeBinding Light=#007AFF, Dark=#0A84FF}"
+                                      Margin="0,4,0,0" />
+                            </StackLayout>
+                        </DataTemplate>
+                    </CollectionView.ItemTemplate>
+                </CollectionView>
+            </StackLayout>
+        </ScrollView>
+
+        <!-- 底部分页信息 -->
+        <StackLayout Grid.Row="2" 
+                     Padding="16,12" 
+                     BackgroundColor="{AppThemeBinding Light=#F5F5F5, Dark=#2d2d2d}"
+                     IsVisible="{Binding HasNotices}">
+            <Label Text="{Binding Notices.Count, StringFormat='共 {0} 条通知'}"
+                   FontSize="12"
+                   Opacity="0.7"
+                   HorizontalTextAlignment="Center"
+                   TextColor="{AppThemeBinding Light=#666666, Dark=#AAAAAA}" />
+        </StackLayout>
+    </Grid>
+</ContentPage>

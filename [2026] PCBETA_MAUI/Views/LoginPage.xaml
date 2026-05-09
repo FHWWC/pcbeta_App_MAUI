@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:PCBetaMAUI.ViewModels"
+             x:Class="PCBetaMAUI.Views.LoginPage"
+             Title="远景论坛登录" Shell.NavBarIsVisible="False">
+
+    <ContentPage.BindingContext>
+        <vm:LoginViewModel/>
+    </ContentPage.BindingContext>    
+    <ScrollView>
+        <VerticalStackLayout Padding="20" Spacing="20">
+
+            <Image Source="pcbeta_logo.png" HeightRequest="60"/>
+            <!-- Logo -->
+            <Label Text="欢迎您，请登录"
+                   FontSize="28"
+                   FontAttributes="Bold"
+                   HorizontalTextAlignment="Center"
+                   TextColor="#1985DB"/>
+
+            <!-- 错误消息 -->
+            <Label Text="{Binding ErrorMessage}"
+                   TextColor="Red"
+                   FontSize="12"
+                   IsVisible="{Binding ErrorMessage, Converter={StaticResource StringToBoolConverter}}"/>
+
+            <!-- 用户名 -->
+            <VerticalStackLayout Spacing="5">
+                <Label Text="用户名" FontAttributes="Bold"/>
+                <Entry Text="{Binding Username}"
+                       Placeholder="请输入用户名"
+                       FontSize="14"/>
+            </VerticalStackLayout>
+
+            <!-- 密码 -->
+            <VerticalStackLayout Spacing="5">
+                <Label Text="密码" FontAttributes="Bold"/>
+                <Entry Text="{Binding Password}"
+                       Placeholder="请输入密码"
+                       IsPassword="True"
+                       FontSize="14"/>
+            </VerticalStackLayout>
+
+            <!-- 安全提问 -->
+            <VerticalStackLayout Spacing="5">
+                <Label Text="安全提问(若未设置请忽略)" FontAttributes="Bold"/>
+                <Picker x:Name="QuestionPicker"
+                        SelectedIndex="{Binding QuestionPickerIndex}"
+                        FontSize="14">
+                </Picker>
+            </VerticalStackLayout>
+
+            <!-- 安全答案 -->
+            <VerticalStackLayout Spacing="5"
+                                IsVisible="{Binding QuestionPickerIndex}">
+                <Label Text="答案" FontAttributes="Bold"/>
+                <Entry Text="{Binding SecurityAnswer}"
+                       Placeholder="请输入答案"
+                       FontSize="14"/>
+            </VerticalStackLayout>
+
+            <!-- 记住密码 -->
+            <HorizontalStackLayout>
+                <CheckBox IsChecked="{Binding RememberPassword}"/>
+                <Label Text="记住密码"
+                   FontSize="16"  VerticalOptions="Center" Margin="-5,0,0,0"/>
+            </HorizontalStackLayout>
+
+            <!-- 登录按钮 -->
+            <Button Text="登录"
+                    Command="{Binding LoginCommand}"
+                    BackgroundColor="#1985DB"
+                    TextColor="White"
+                    FontAttributes="Bold"
+                    Padding="0,15"
+                    IsEnabled="{Binding IsLoading, Converter={StaticResource BoolInvertConverter}}"/>
+
+            <!-- 加载指示器 -->
+            <ActivityIndicator IsRunning="{Binding IsLoading}"
+                              IsVisible="{Binding IsLoading}"
+                              Color="#1985DB"/>
+
+            <!-- 快速导航按钮 -->
+            <Button Text="跳过登录，浏览论坛"
+                    Command="{Binding GuestAccessAsyncCommand}"
+                    BackgroundColor="Transparent"
+                    TextColor="#1985DB"
+                    FontAttributes="Bold"
+                    IsEnabled="{Binding IsLoading, Converter={StaticResource BoolInvertConverter}}"/>
+
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

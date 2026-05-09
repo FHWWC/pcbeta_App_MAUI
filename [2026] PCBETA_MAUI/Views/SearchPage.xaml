@@ -1,0 +1,164 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:PCBetaMAUI.ViewModels"
+             x:Class="PCBetaMAUI.Views.SearchPage"
+             Title="搜索帖子">
+
+    <ContentPage.BindingContext>
+        <vm:SearchViewModel />
+    </ContentPage.BindingContext>
+    <ContentPage.Resources>
+        <ResourceDictionary>
+            <Style x:Key="BottomNaviButtonStyle" TargetType="Button">
+                <Setter Property="BackgroundColor" Value="DodgerBlue"/>
+                <Setter Property="TextColor" Value="White"/>
+                <Setter Property="CornerRadius" Value="0"/>
+                <Setter Property="Padding" Value="0"/>
+                <Setter Property="HeightRequest" Value="30"/>
+                <Setter Property="VisualStateManager.VisualStateGroups">
+                    <VisualStateGroupList>
+                        <VisualStateGroup Name="CommonStates">
+                            <VisualState Name="Normal">
+                                <VisualState.Setters>
+                                    <Setter Property="BackgroundColor" Value="DodgerBlue"/>
+                                </VisualState.Setters>
+                            </VisualState>
+                            <VisualState Name="PointerOver">
+                                <VisualState.Setters>
+                                    <Setter Property="BackgroundColor" Value="SkyBlue"/>
+                                </VisualState.Setters>
+                            </VisualState>
+                            <VisualState Name="Pressed">
+                                <VisualState.Setters>
+                                    <Setter Property="BackgroundColor" Value="LightBlue"/>
+                                </VisualState.Setters>
+                            </VisualState>
+                        </VisualStateGroup>
+                    </VisualStateGroupList>
+                </Setter>
+            </Style>
+        </ResourceDictionary>
+    </ContentPage.Resources>
+    
+    <Grid RowDefinitions="120,*,50" Padding="8,2">
+
+        <!-- Top: Search box -->
+        <Grid Grid.Row="0" RowDefinitions="*,*" ColumnDefinitions="*,120" VerticalOptions="Center">
+            <Entry Text="{Binding SearchText}" Placeholder="请输入查找内容" />
+            <Button Text="查询最新数据" Background="DodgerBlue" Command="{Binding SearchCommand}" HorizontalOptions="End" Grid.Column="1"/>
+
+            <HorizontalStackLayout Grid.Row="1">
+                <RadioButton Content="按用户回复时间" IsChecked="{Binding IsLastPostChecked}" GroupName="OrderbyType"/>
+                <RadioButton Content="按帖子发布时间" IsChecked="{Binding IsDatelineChecked}" GroupName="OrderbyType" Margin="10,0,0,0"/>
+            </HorizontalStackLayout>
+        </Grid>
+
+        <!-- Middle: Results list -->
+        <CollectionView Grid.Row="1" ItemsSource="{Binding SearchResults}" SelectionMode="None">
+            <CollectionView.ItemsLayout>
+                <LinearItemsLayout Orientation="Vertical" ItemSpacing="6" />
+            </CollectionView.ItemsLayout>
+            <CollectionView.ItemTemplate>
+                <DataTemplate>
+                    <Frame Padding="12" Margin="6" CornerRadius="8" HasShadow="True" BorderColor="#E0E0E0">
+                        <Frame.GestureRecognizers>
+                            <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.SelectThreadCommand}" CommandParameter="{Binding .}"/>
+                        </Frame.GestureRecognizers>
+                        <Grid ColumnDefinitions="*,150">
+
+                            <Grid RowDefinitions="*,2*,*">
+                                <Label 
+                                Text="{Binding Title}" 
+                                FontAttributes="Bold" 
+                                FontSize="14"
+                                LineBreakMode="TailTruncation"
+                                MaxLines="2" />
+
+                                <Label 
+                                Text="{Binding PreviewContent}" 
+                                FontSize="12"
+                                TextColor="#555555"
+                                LineBreakMode="TailTruncation"
+                                MaxLines="2" Grid.Row="1" Margin="0,12"/>
+
+                                <Grid ColumnDefinitions="*,*,Auto" Grid.Row="2">
+                                    <!-- Forum Name -->
+                                    <Label 
+                                    Text="{Binding ForumName}" 
+                                    FontSize="11"
+                                    TextColor="#FF6B6B"
+
+                                    LineBreakMode="TailTruncation" />
+                                    <!-- Author -->
+                                    <Label 
+                                  Text="{Binding Author, StringFormat='作者: {0}'}" 
+                                  FontSize="10"
+                                  TextColor="Gray"
+                                  VerticalOptions="Center"
+                                  LineBreakMode="TailTruncation" Grid.Column="1"/>
+
+                 
+                                </Grid>
+
+                            </Grid>
+
+                            <Grid RowDefinitions="*,*,*" Grid.Column="1" >
+                                <!-- Thread ID (hidden but available) -->
+                                <Label Text="{Binding Id, StringFormat='ID {0}'}"  FontSize="12" TextColor="#AAAAAA"  HorizontalOptions="End"/>
+
+                                <Grid ColumnDefinitions="*,*" Margin="0,12" Grid.Row="1" >
+                                    <!-- Replies Count -->
+                                    <VerticalStackLayout>
+                                        <Label 
+                                        Text="{Binding Replies}" 
+                                        FontAttributes="Bold"
+                                        FontSize="12"
+                                        TextColor="#4C6EF5"
+                                        HorizontalTextAlignment="Center"          />
+                                        <Label 
+                                        Text="回复" 
+                                        FontSize="10"
+                                        TextColor="Gray"
+                                        HorizontalTextAlignment="Center" />
+                                    </VerticalStackLayout>
+
+                                    <!-- Views Count -->
+                                    <VerticalStackLayout Grid.Column="1">
+                                        <Label 
+                                        Text="{Binding Views}" 
+                                        FontAttributes="Bold"
+                                        FontSize="12"
+                                        TextColor="#51CF66"
+                                        HorizontalTextAlignment="Center" />
+                                        <Label 
+                                        Text="查看" 
+                                        FontSize="10"
+                                        TextColor="Gray"
+                                        HorizontalTextAlignment="Center" />
+                                    </VerticalStackLayout>
+                                </Grid>
+
+                                <!-- PostTime -->
+                                <Label Text="{Binding PostTime, StringFormat='发布时间 {0:yyyy-MM-dd HH:mm}'}" 
+                 FontSize="10" TextColor="#999999" Grid.Row="2" HorizontalOptions="End" VerticalOptions="End"/>
+                            </Grid>
+
+                        </Grid>
+                    </Frame>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+
+        <!-- Bottom: Pagination and refresh -->
+        <Grid Grid.Row="2" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8" VerticalOptions="Center" IsVisible="False">
+            <Button Text="上一页" Command="{Binding PreviousPageCommand}" IsEnabled="{Binding CanGoPrevious}" />
+            <Label Text="{Binding PageDisplay}" HorizontalOptions="Center" VerticalOptions="Center" />
+            <Button Text="下一页" Command="{Binding NextPageCommand}" IsEnabled="{Binding CanGoNext}" />
+        </Grid>
+
+        <Grid Grid.Row="2">
+            <Button Text="刷新"  Style="{StaticResource BottomNaviButtonStyle}" VerticalOptions="End" Command="{Binding RefreshCommand}"/>
+        </Grid>
+    </Grid>
+</ContentPage>
