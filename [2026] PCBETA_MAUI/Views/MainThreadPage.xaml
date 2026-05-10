@@ -137,7 +137,7 @@
                                                             </StackLayout>
                                                             <Label Text="{Binding LastReply}" 
                                                                Grid.Column="1" 
-                                                               FontSize="11"
+                                                               FontSize="11" IsVisible="{OnPlatform Android=False}"
                                                               />
                                                         </Grid>
 
@@ -150,6 +150,11 @@
                                                                FontSize="11"
                                                                TextColor="Gray"/>
                                                         </Grid>
+
+                                                        <Label Text="{Binding LastReply}" 
+                                                   Grid.Column="1" 
+                                                   FontSize="11" IsVisible="{OnPlatform False,Android=True}"
+                                                  />
                                                     </VerticalStackLayout>
                                                 </Grid>
                                             </Frame>
