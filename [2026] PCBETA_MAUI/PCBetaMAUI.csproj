@@ -81,10 +81,6 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <MauiImage Remove="Resources\Images\pcbeta_logo_full.scale-400.png" />
-	</ItemGroup>
-
-	<ItemGroup>
 	  <None Remove="Resources\win_app\%24placeholder%24.scale-400.png" />
 	  <None Remove="Resources\win_app\BadgeLogo.scale-400.png" />
 	  <None Remove="Resources\win_app\logo.scale-100.png" />
@@ -95,7 +91,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <Content Include="Resources\Images\pcbeta_logo_full.scale-400.png" />
+	  <Content Include="Resources\Images\pcbeta_logo_full.png" />
 	  <Content Include="Resources\win_app\$placeholder$.scale-400.png" />
 	  <Content Include="Resources\win_app\BadgeLogo.scale-400.png" />
 	  <Content Include="Resources\win_app\logo.scale-100.png" />
