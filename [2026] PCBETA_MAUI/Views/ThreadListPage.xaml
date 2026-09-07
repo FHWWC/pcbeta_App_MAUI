@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-                          xmlns:vm="clr-namespace:PCBetaMAUI.ViewModels"
+                           xmlns:vm="clr-namespace:PCBetaMAUI.ViewModels" xmlns:converters="clr-namespace:PCBetaMAUI.Converters"
              x:Class="PCBetaMAUI.Views.ThreadListPage" Shell.NavBarIsVisible="False"
              Title="帖子列表">
 
@@ -12,12 +12,16 @@
     <ContentPage.Resources>
         <ResourceDictionary>
             <Style x:Key="BottomNaviButtonStyle" TargetType="Button">
-                <Setter Property="BackgroundColor" Value="DodgerBlue"/>
-                <Setter Property="TextColor" Value="White"/>
-                <Setter Property="CornerRadius" Value="0"/>
+                <Setter Property="BackgroundColor" Value="Transparent"/>
+                <Setter Property="TextColor" Value="{AppThemeBinding Light=Black, Dark=White}"/>
+                <Setter Property="CornerRadius" Value="50"/>
+                <Setter Property="BorderWidth" Value="2"/>
+                <Setter Property="BorderColor" Value="LightBlue"/>
                 <Setter Property="Padding" Value="0"/>
-                <Setter Property="HeightRequest" Value="40"/>
-                <Setter Property="VisualStateManager.VisualStateGroups">
+                <Setter Property="HeightRequest" Value="50"/>
+                <Setter Property="WidthRequest" Value="50"/>
+                <!--
+                                <Setter Property="VisualStateManager.VisualStateGroups">
                     <VisualStateGroupList>
                         <VisualStateGroup Name="CommonStates">
                             <VisualState Name="Normal">
@@ -38,6 +42,7 @@
                         </VisualStateGroup>
                     </VisualStateGroupList>
                 </Setter>
+                -->
             </Style>
             <Style x:Key="MordenButtonStyle" TargetType="Button">
                 <Setter Property="BackgroundColor" Value="DodgerBlue"/>
@@ -66,14 +71,15 @@
                     </VisualStateGroupList>
                 </Setter>
             </Style>
+            <converters:ListCountToBoolConverter x:Key="ListCountToBoolConverter"/>
         </ResourceDictionary>
     </ContentPage.Resources>
 
-    <Grid RowDefinitions="50,*,60">
+    <Grid RowDefinitions="50,*,80" BackgroundColor="{AppThemeBinding Light=#F6F8FC, Dark=#151A24}">
 
         <!-- 筛选栏 -->
-        <Grid ColumnDefinitions="*,80" Padding="10" BackgroundColor="#F5F5F5">
-            <Label Text="{Binding BoardName}" FontSize="22" VerticalOptions="Center" FontAttributes="Bold"/>
+        <Grid ColumnDefinitions="*,80" Padding="18,8" BackgroundColor="{AppThemeBinding Light=White, Dark=#202938}">
+            <Label Text="{Binding BoardName}" FontSize="22" VerticalOptions="Center" FontAttributes="Bold" TextColor="{AppThemeBinding Light=Black, Dark=White}"/>
             <Button Text="排序"  Style="{StaticResource MordenButtonStyle}" IsVisible="False" Grid.Column="1"/>
         </Grid>
 
@@ -88,20 +94,20 @@
         <!-- 错误消息 -->
         <Label Grid.Row="1"
                Text="{Binding ErrorMessage}"
-               TextColor="Red"
+               TextColor="{AppThemeBinding Light=Red, Dark=#FF6B6B}"
                FontSize="14"
                HorizontalOptions="Center"
                VerticalOptions="Center"
                IsVisible="{Binding ErrorMessage, Converter={StaticResource StringToBoolConverter}}"/>
 
         <!--  改进：使用 ScrollView 包含两个列表区域，支持整体滚动 -->
-        <ScrollView Grid.Row="1" IsVisible="{Binding HasThreads}">
-            <VerticalStackLayout Spacing="0">
+        <ScrollView Grid.Row="1" IsVisible="{Binding HasThreads}" BackgroundColor="{AppThemeBinding Light=White, Dark=#1E1E1E}">
+            <VerticalStackLayout Spacing="8" Padding="8" BackgroundColor="{AppThemeBinding Light=#F6F8FC, Dark=#151A24}">
 
                 <!-- ============ 置顶帖区域 ============ -->
-                <VerticalStackLayout Spacing="8" Padding="10,0" IsVisible="{Binding StickyThreads.Count, Converter={StaticResource StringNotEqualZeroConverter}}">
+                    <VerticalStackLayout Spacing="8" Padding="0" IsVisible="{Binding StickyThreads.Count, Converter={StaticResource StringNotEqualZeroConverter}}" BackgroundColor="{AppThemeBinding Light=#F6F8FC, Dark=#151A24}">
                     <!-- 置顶帖标题按钮 - 展开/收回 -->
-                    <Grid ColumnDefinitions="*,40" HeightRequest="50" BackgroundColor="GhostWhite">
+                    <Grid ColumnDefinitions="*,40" HeightRequest="52" Padding="12,0" BackgroundColor="{AppThemeBinding Light=#EAF2FF, Dark=#243653}">
                         <Label Text="置顶帖" FontSize="16" FontAttributes="Bold" TextColor="#FF6B35" HorizontalOptions="Center" VerticalOptions="Center"/>
                         <Label Grid.Column="1" 
                                Text="{Binding IsStickyExpanded, Converter={StaticResource ExpandedToSymbolConverter}}" 
@@ -129,21 +135,43 @@
                         <CollectionView.ItemTemplate>
                             <DataTemplate>
                                 <!-- 置顶帖使用高亮背景颜色 -->
-                                <Frame Padding="12" CornerRadius="6" BorderColor="#FF6B35" Margin="8,3" HasShadow="True">
+                                <Frame Padding="14" CornerRadius="14" BorderColor="#FF9A62" Margin="0,3" HasShadow="False" BackgroundColor="{AppThemeBinding Light=White, Dark=#202938}">
                                     <Frame.GestureRecognizers>
                                         <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type CollectionView}}, Path=SelectionChangedCommand}" CommandParameter="{Binding .}"/>
+                                        <PointerGestureRecognizer PointerEntered="OnThreadPointerEntered" PointerExited="OnThreadPointerExited"/>
                                     </Frame.GestureRecognizers>
                                     <VerticalStackLayout Spacing="6">
+                                        <Grid ColumnDefinitions="Auto,*,100" ColumnSpacing="4">
+                                            <Label Text="{Binding Category}" FontSize="12" TextColor="{AppThemeBinding Light=Black, Dark=White}" VerticalOptions="Center"/>
+                                            <StackLayout Orientation="Horizontal" Grid.Column="1" VerticalOptions="Center" >
+                                                <Label Text="{Binding ReadPrem}" FontSize="12" TextColor="{AppThemeBinding Light=Black, Dark=White}" IsVisible="{Binding ReadPrem, Converter={StaticResource StringToBoolConverter}}"/>
+                                                <Label Text="{Binding Replycredit}" FontAttributes="Bold" FontSize="12" TextColor="{AppThemeBinding Light=Red, Dark=OrangeRed}" IsVisible="{Binding Replycredit, Converter={StaticResource StringToBoolConverter}}" Margin="6,0,0,0"/>
+                                            </StackLayout>
+                                            <Grid Grid.Column="2" HorizontalOptions="Start">
+                                                 <Image Source="{Binding StampSource}" HeightRequest="15"/>
+                                            </Grid>
+                                        </Grid>
                                         <!-- 置顶标签 -->
-                                        <StackLayout Orientation="Horizontal" Spacing="8">
-                                            <Label Text="📌" FontSize="14" VerticalOptions="Center"/>
-                                            <Label Text="{Binding Title}" FontSize="14" FontAttributes="Bold" LineBreakMode="TailTruncation" VerticalOptions="Center"/>
-                                        </StackLayout>
+                                        <Grid ColumnDefinitions="Auto, *" HorizontalOptions="Fill">
+                                            <StackLayout Grid.Column="0" Orientation="Horizontal" VerticalOptions="Center">
+                                                <Label Text="📌" FontSize="16" VerticalOptions="Center" Margin="0,0,5,0"/>
+                                                <!-- 图标列表（来自 ThreadInfo.Icons） -->
+                                                <StackLayout Orientation="Horizontal" Spacing="2" BindableLayout.ItemsSource="{Binding Icons}" IsVisible="{Binding Icons, Converter={StaticResource ListCountToBoolConverter}}" Margin="0,0,5,0" >
+                                                    <BindableLayout.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <Label Text="{Binding .}" FontSize="16" VerticalOptions="Center"/>
+                                                        </DataTemplate>
+                                                    </BindableLayout.ItemTemplate>
+                                                </StackLayout>
+                                            </StackLayout>
+
+                                            <Label Grid.Column="1" Text="{Binding Title}" FontSize="14" FontAttributes="Bold" LineBreakMode="TailTruncation" MaxLines="1" VerticalOptions="Center" TextColor="{AppThemeBinding Light=Black, Dark=White}"/>
+                                        </Grid>
 
                                         <Grid ColumnDefinitions="*,100" ColumnSpacing="10">
                                             <StackLayout Spacing="2">
-                                                <Label Text="{Binding Author, StringFormat='作者: {0}'}" FontSize="11" TextColor="Gray"/>
-                                                <Label Text="{Binding PostTime, StringFormat='时间: {0:yyyy-MM-dd HH:mm}'}" FontSize="11" TextColor="Gray"/>
+                                                <Label Text="{Binding Author, StringFormat='作者: {0}'}" FontSize="11" TextColor="{AppThemeBinding Light=Gray, Dark=#B0B0B0}"/>
+                                                <Label Text="{Binding PostTime, StringFormat='时间: {0:yyyy-MM-dd HH:mm}'}" FontSize="11" TextColor="{AppThemeBinding Light=Gray, Dark=#B0B0B0}"/>
                                             </StackLayout>
 
                                             <StackLayout Grid.Column="1" Spacing="2">
@@ -159,9 +187,9 @@
                 </VerticalStackLayout>
 
                 <!-- ============ 普通帖子区域 ============ -->
-                <VerticalStackLayout Spacing="8" Padding="10,0" >
+                <VerticalStackLayout Spacing="8" Padding="10,0" BackgroundColor="{AppThemeBinding Light=White, Dark=#1E1E1E}">
                     <!-- 今日好贴 - 展开/收回按钮 -->
-                    <Grid ColumnDefinitions="*,40" HeightRequest="50" BackgroundColor="GhostWhite">
+                    <Grid ColumnDefinitions="*,40" HeightRequest="50" BackgroundColor="{AppThemeBinding Light=GhostWhite, Dark=#2D2D2D}">
                         <Label Text="今日好贴" FontSize="16" FontAttributes="Bold" TextColor="#1985DB" HorizontalOptions="Center" VerticalOptions="Center"/>
                         <Label Grid.Column="1" 
                            Text="{Binding IsThreadsExpanded, Converter={StaticResource ExpandedToSymbolConverter}}" 
@@ -188,17 +216,41 @@
 
                         <CollectionView.ItemTemplate>
                             <DataTemplate>
-                                <Frame Padding="12" CornerRadius="6" BorderColor="#E0E0E0" Margin="8,5">
+                                <Frame Padding="10" CornerRadius="6" BorderColor="#E0E0E0" Margin="8,5" HasShadow="False" BackgroundColor="{AppThemeBinding Light=White, Dark=#2D2D2D}">
                                     <Frame.GestureRecognizers>
                                         <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type CollectionView}}, Path=SelectionChangedCommand}" CommandParameter="{Binding .}"/>
+                                        <PointerGestureRecognizer PointerEntered="OnThreadPointerEntered" PointerExited="OnThreadPointerExited"/>
                                     </Frame.GestureRecognizers>
                                     <VerticalStackLayout Spacing="6">
-                                        <Label Text="{Binding Title}" FontSize="14" FontAttributes="Bold" LineBreakMode="TailTruncation"/>
+                                        <Grid ColumnDefinitions="Auto,*,100" ColumnSpacing="4">
+                                            <Label Text="{Binding Category}" FontSize="12"  TextColor="{AppThemeBinding Light=Black, Dark=White}" VerticalOptions="Center"/>
+                                            <StackLayout Orientation="Horizontal" Grid.Column="1" VerticalOptions="Center" >
+                                                <Label Text="{Binding ReadPrem}" FontSize="12"  TextColor="{AppThemeBinding Light=Black, Dark=White}" IsVisible="{Binding ReadPrem, Converter={StaticResource StringToBoolConverter}}"/>
+                                                <Label Text="{Binding Replycredit}" FontAttributes="Bold" FontSize="12"  TextColor="{AppThemeBinding Light=Red, Dark=OrangeRed}" IsVisible="{Binding Replycredit, Converter={StaticResource StringToBoolConverter}}" Margin="6,0,0,0"/>
+                                            </StackLayout>
+                                            <Grid Grid.Column="2" HorizontalOptions="Start">
+                                                <Image Source="{Binding StampSource}" HeightRequest="15"/>
+                                            </Grid>
+                                        </Grid>
+                                        <Grid ColumnDefinitions="Auto, *" HorizontalOptions="Fill">
+                                            <StackLayout Grid.Column="0" Orientation="Horizontal" VerticalOptions="Center">
+                                                <!-- 图标列表（来自 ThreadInfo.Icons） -->
+                                                <StackLayout Orientation="Horizontal" Spacing="2" BindableLayout.ItemsSource="{Binding Icons}" IsVisible="{Binding Icons, Converter={StaticResource ListCountToBoolConverter}}" Margin="0,0,5,0">
+                                                    <BindableLayout.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <Label Text="{Binding .}" FontSize="16" VerticalOptions="Center"/>
+                                                        </DataTemplate>
+                                                    </BindableLayout.ItemTemplate>
+                                                </StackLayout>
+                                            </StackLayout>
+
+                                            <Label Grid.Column="1" Text="{Binding Title}" FontSize="14" FontAttributes="Bold" LineBreakMode="TailTruncation" MaxLines="1" VerticalOptions="Center" TextColor="{AppThemeBinding Light=Black, Dark=White}"/>
+                                        </Grid>
 
                                         <Grid ColumnDefinitions="*,100" ColumnSpacing="10">
                                             <StackLayout Spacing="2">
-                                                <Label Text="{Binding Author, StringFormat='作者: {0}'}" FontSize="11" TextColor="Gray"/>
-                                                <Label Text="{Binding PostTime, StringFormat='时间: {0:yyyy-MM-dd HH:mm}'}" FontSize="11" TextColor="Gray"/>
+                                                <Label Text="{Binding Author, StringFormat='作者: {0}'}" FontSize="11" TextColor="{AppThemeBinding Light=Gray, Dark=#B0B0B0}"/>
+                                                <Label Text="{Binding PostTime, StringFormat='时间: {0:yyyy-MM-dd HH:mm}'}" FontSize="11" TextColor="{AppThemeBinding Light=Gray, Dark=#B0B0B0}"/>
                                             </StackLayout>
 
                                             <StackLayout Grid.Column="1" Spacing="2">
@@ -216,14 +268,39 @@
         </ScrollView>
 
         <!-- 底部导航：新增刷新按钮，并统一使用 MainThreadPage 相同的样式 BottomNaviButtonStyle -->
-        <Grid RowDefinitions="*" ColumnDefinitions="*,*,*,*" Grid.Row="2" >
-            <!-- 新增：刷新当前页面（重新加载） -->
-            <Button Text="刷新" Command="{Binding RefreshCommand}" Style="{StaticResource BottomNaviButtonStyle}" Margin="2,0" VerticalOptions="End"  />
-
-            <!-- 保持上/发新帖/下一页，统一样式 -->
-            <Button Text="上一页" Command="{Binding PreviousPageCommand}" Style="{StaticResource BottomNaviButtonStyle}"  Margin="2,0" VerticalOptions="End"  Grid.Column="1"/>
-            <Button Text="发新帖" Command="{Binding PostNewThreadCommand}" Style="{StaticResource BottomNaviButtonStyle}" Margin="2,0" VerticalOptions="End"  Grid.Column="2"/>
-            <Button Text="下一页" Command="{Binding NextPageCommand}" Style="{StaticResource BottomNaviButtonStyle}" Margin="2,0" VerticalOptions="End"  Grid.Column="3"/>
+        <Grid ColumnDefinitions="*,*,*,*" Grid.Row="2" BackgroundColor="{AppThemeBinding Light=#F6F8FC, Dark=#202938}" Padding="0,5">
+            <StackLayout>
+                <Button Command="{Binding RefreshCommand}" Style="{StaticResource BottomNaviButtonStyle}">
+                    <Button.ImageSource>
+                        <FontImageSource Glyph="&#xE72c;" Size="Medium" Color="{AppThemeBinding Light=Black, Dark=White}" FontFamily="Segoe Fluent Icons"/>
+                    </Button.ImageSource>
+                </Button>
+                <Label Text="刷新" HorizontalOptions="Center" FontSize="12" TextColor="{AppThemeBinding Light=Black, Dark=White}"/>
+            </StackLayout>
+            <StackLayout Grid.Column="1">
+                <Button  Command="{Binding PreviousPageCommand}" Style="{StaticResource BottomNaviButtonStyle}">
+                    <Button.ImageSource>
+                        <FontImageSource Glyph="&#xE760;" Size="Large" Color="{AppThemeBinding Light=Black, Dark=White}" FontFamily="Segoe Fluent Icons"/>
+                    </Button.ImageSource>
+                </Button>
+                <Label Text="上一页" HorizontalOptions="Center" FontSize="12" TextColor="{AppThemeBinding Light=Black, Dark=White}"/>
+            </StackLayout>
+            <StackLayout Grid.Column="2">
+                <Button Command="{Binding PostNewThreadCommand}" Style="{StaticResource BottomNaviButtonStyle}">
+                    <Button.ImageSource>
+                        <FontImageSource Glyph="&#xE710;" Size="Medium" Color="{AppThemeBinding Light=Black, Dark=White}" FontFamily="Segoe Fluent Icons"/>
+                    </Button.ImageSource>
+                </Button>
+                <Label Text="发新帖" HorizontalOptions="Center" FontSize="12" TextColor="{AppThemeBinding Light=Black, Dark=White}"/>
+            </StackLayout>
+            <StackLayout Grid.Column="3">
+                <Button Command="{Binding NextPageCommand}" Style="{StaticResource BottomNaviButtonStyle}" >
+                    <Button.ImageSource>
+                        <FontImageSource Glyph="&#xE761;" Size="Large" Color="{AppThemeBinding Light=Black, Dark=White}" FontFamily="Segoe Fluent Icons"/>
+                    </Button.ImageSource>
+                </Button>
+                <Label Text="下一页" HorizontalOptions="Center" FontSize="12" TextColor="{AppThemeBinding Light=Black, Dark=White}"/>
+            </StackLayout>
         </Grid>
     </Grid>
 </ContentPage>

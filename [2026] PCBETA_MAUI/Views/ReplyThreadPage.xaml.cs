@@ -142,11 +142,27 @@ public partial class ReplyThreadPage : ContentPage, IQueryAttributable
         if (BindingContext is ReplyThreadViewModel viewModel)
         {
             Debug.WriteLine($"📝 ViewModel 已找到，尝试执行 SubmitReplyCommand");
+            Debug.WriteLine($"📝 ReplyContent 长度: {viewModel.ReplyContent?.Length ?? 0}");
+            Debug.WriteLine($"📝 IsSubmitEnabled: {viewModel.IsSubmitEnabled}");
+            Debug.WriteLine($"📝 IsSubmitting: {viewModel.IsSubmitting}");  // ✅ 新增：显示提交状态
             Debug.WriteLine($"📝 SubmitReplyCommand != null: {viewModel.SubmitReplyCommand != null}");
-            Debug.WriteLine($"📝 SubmitReplyCommand.CanExecute(null): {viewModel.SubmitReplyCommand?.CanExecute(null)}");
+
+            // 检查 AsyncRelayCommand 的运行状态
+            var submitCmd = viewModel.SubmitReplyCommand as CommunityToolkit.Mvvm.Input.AsyncRelayCommand;
+            if (submitCmd != null)
+            {
+                Debug.WriteLine($"📝 SubmitReplyCommand.IsRunning: {submitCmd.IsRunning}");
+            }
+
+            // 重新通知一次确保 CanExecute 被重新评估
+            viewModel.SubmitReplyCommand?.NotifyCanExecuteChanged();
+            Debug.WriteLine($"🔔 已手动触发 NotifyCanExecuteChanged()");
+
+            var canExecute = viewModel.SubmitReplyCommand?.CanExecute(null);
+            Debug.WriteLine($"📝 SubmitReplyCommand.CanExecute(null): {canExecute}");
 
             // 尝试执行命令
-            if (viewModel.SubmitReplyCommand?.CanExecute(null) == true)
+            if (canExecute == true)
             {
                 Debug.WriteLine($"🚀 执行 SubmitReplyCommand");
                 viewModel.SubmitReplyCommand?.Execute(null);
@@ -154,6 +170,18 @@ public partial class ReplyThreadPage : ContentPage, IQueryAttributable
             else
             {
                 Debug.WriteLine($"❌ SubmitReplyCommand 无法执行 (CanExecute=false)");
+                Debug.WriteLine($"   原因分析:");
+                Debug.WriteLine($"   - ReplyContent 是否为空: {string.IsNullOrWhiteSpace(viewModel.ReplyContent)}");
+                Debug.WriteLine($"   - ReplyContent 长度是否 < 8: {(viewModel.ReplyContent?.Length ?? 0) < 8}");
+                Debug.WriteLine($"   - IsSubmitEnabled 状态: {viewModel.IsSubmitEnabled}");
+                if (submitCmd != null)
+                {
+                    Debug.WriteLine($"   - SubmitReplyCommand.IsRunning 状态: {submitCmd.IsRunning}");
+                    if (submitCmd.IsRunning)
+                    {
+                        Debug.WriteLine($"   💡 提示：命令仍在执行中，这是防止双重提交的正常行为");
+                    }
+                }
             }
         }
         else

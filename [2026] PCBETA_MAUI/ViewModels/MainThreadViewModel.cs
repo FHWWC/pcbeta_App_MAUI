@@ -67,6 +67,11 @@ public partial class MainThreadViewModel : ObservableObject
         {
             var categories = await _apiService.GetMainPageForumsAsync();
 
+            var sections = categories
+                .SelectMany(category => category.Sections)
+                .ToList();
+            await Task.WhenAll(sections.Select(LoadForumLogoAsync));
+
             ForumCategories.Clear();
             foreach (var category in categories)
             {
@@ -95,6 +100,36 @@ public partial class MainThreadViewModel : ObservableObject
         finally
         {
             IsLoading = false;
+        }
+    }
+
+    private static async Task LoadForumLogoAsync(ForumSection forum)
+    {
+        var logoUrl = forum.LogoUrl?.Trim();
+        if (string.IsNullOrEmpty(logoUrl))
+        {
+            return;
+        }
+
+        if (!Uri.TryCreate(logoUrl, UriKind.Absolute, out var uri) ||
+            (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
+        {
+            forum.LogoSource = ImageSource.FromFile(logoUrl);
+            return;
+        }
+
+        try
+        {
+            var imageBytes = await HttpClientManager.Instance.GetByteArrayAsync(logoUrl);
+            if (imageBytes.Length > 0)
+            {
+                forum.LogoSource = ImageSource.FromStream(() =>
+                    new MemoryStream(imageBytes, writable: false));
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Forum logo loading failed: {logoUrl}, {ex.Message}");
         }
     }
 
@@ -200,6 +235,25 @@ public partial class MainThreadViewModel : ObservableObject
     }
 
     /// <summary>
+    /// Opens the AppShell menu
+    /// </summary>
+    [RelayCommand]
+    public void OpenMenu()
+    {
+        try
+        {
+            if (Shell.Current is AppShell appShell)
+            {
+                appShell.FlyoutIsPresented = !appShell.FlyoutIsPresented;
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Open menu error: {ex.Message}");
+        }
+    }
+
+    /// <summary>
     /// Refreshes the forum list
     /// </summary>
     [RelayCommand]
@@ -216,14 +270,13 @@ public partial class MainThreadViewModel : ObservableObject
     {
         try
         {
-            // Check if user is logged in
-            if (Application.Current?.Windows[0].Page is AppShell appShell)
+            // 验证登录
+            var loggedIn = await _apiService.IsLoggedInAsync();
+            if (!loggedIn)
             {
-                if (!appShell.IsLoggedIn)
-                {
-                    await Application.Current.MainPage.DisplayAlert("提示", "您需要先登录才能使用发现功能", "确定");
-                    return;
-                }
+                // 导航到登录页
+                await _navigationService.NavigateToAsync("login");
+                return;
             }
 
             var parameters = new Dictionary<string, object>
@@ -260,13 +313,22 @@ public partial class MainThreadViewModel : ObservableObject
         try
         {
             // Check if user is logged in
-            if (Application.Current?.Windows[0].Page is AppShell appShell)
+            //if (Application.Current?.Windows[0].Page is AppShell appShell)
+            //{
+            //    if (!appShell.IsLoggedIn)
+            //    {
+            //        await Application.Current.MainPage?.DisplayAlert("提示", "您需要先登录才能查看个人资料", "确定");
+            //        return;
+            //    }
+            //}
+
+            // 验证登录
+            var loggedIn = await _apiService.IsLoggedInAsync();
+            if (!loggedIn)
             {
-                if (!appShell.IsLoggedIn)
-                {
-                    await Application.Current.MainPage?.DisplayAlert("提示", "您需要先登录才能查看个人资料", "确定");
-                    return;
-                }
+                // 导航到登录页
+                await _navigationService.NavigateToAsync("login");
+                return;
             }
 
             await _navigationService.NavigateToAsync("myprofile");

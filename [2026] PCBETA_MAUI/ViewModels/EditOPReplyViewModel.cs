@@ -35,6 +35,8 @@ public class EditOPReplyViewModel : INotifyPropertyChanged
 
     // 编辑特有参数
     private string _formhash = string.Empty;
+    private string _uid = string.Empty;
+    private string _hash = string.Empty;
     private string _posttime = string.Empty;
     private string _typeId = "0";
 
@@ -138,13 +140,6 @@ public class EditOPReplyViewModel : INotifyPropertyChanged
         get => _postId;
         set => SetProperty(ref _postId, value);
     }
-
-    public string Formhash
-    {
-        get => _formhash;
-        set => SetProperty(ref _formhash, value);
-    }
-
     public string Posttime
     {
         get => _posttime;
@@ -325,14 +320,17 @@ public class EditOPReplyViewModel : INotifyPropertyChanged
             }
 
             // 从HTML中提取关键数据
-            Formhash = ExtractFormHashFromHtml(pageHtml);
+            _formhash = ExtractFormHashFromHtml(pageHtml);
+            _uid = ExtractUidFromHtml(pageHtml);
+            _hash = ExtractHashFromHtml(pageHtml);
+
             Posttime = ExtractPostTimeFromHtml(pageHtml);
             var originalContent = ExtractMessageFromHtml(pageHtml);
             var subject = ExtractSubjectFromHtml(pageHtml);
             var extractedTypeId = ExtractTypeIdFromHtml(pageHtml);
 
             Debug.WriteLine($"✅ 提取的数据:");
-            Debug.WriteLine($"   - formhash: {Formhash}");
+            Debug.WriteLine($"   - formhash: {_formhash}");
             Debug.WriteLine($"   - posttime: {Posttime}");
             Debug.WriteLine($"   - subject: {subject}");
             Debug.WriteLine($"   - typeid: {extractedTypeId}");
@@ -846,8 +844,8 @@ public class EditOPReplyViewModel : INotifyPropertyChanged
 
             UploadedImages.Add(fileInfo);
 
-            var (formhash, uid, hash) = await GetAuthenticationParamsAsync();
-            var uploadResult = await UploadFileAsync(fileResult.FullPath, isImage: true, uid, hash);
+            //var (formhash, uid, hash) = await GetAuthenticationParamsAsync();
+            var uploadResult = await UploadFileAsync(fileResult.FullPath, isImage: true, _uid, _hash);
 
             if (uploadResult != null)
             {
@@ -920,8 +918,8 @@ public class EditOPReplyViewModel : INotifyPropertyChanged
 
             UploadedAttachments.Add(fileInfo);
 
-            var (formhash, uid, hash) = await GetAuthenticationParamsAsync();
-            var uploadResult = await UploadFileAsync(fileResult.FullPath, isImage: false, uid, hash);
+            //var (formhash, uid, hash) = await GetAuthenticationParamsAsync();
+            var uploadResult = await UploadFileAsync(fileResult.FullPath, isImage: false, _uid, _hash);
 
             if (uploadResult != null)
             {
@@ -1104,8 +1102,8 @@ public class EditOPReplyViewModel : INotifyPropertyChanged
     {
         try
         {
-            var (formhash, _, _) = await GetAuthenticationParamsAsync();
-            var deleteUrl = $"https://bbs.pcbeta.com/forum.php?mod=ajax&action=deleteattach&inajax=yes&aids[]={attachmentId}&tid={ThreadId}&pid={PostId}&formhash={formhash}";
+            //var (formhash, _, _) = await GetAuthenticationParamsAsync();
+            var deleteUrl = $"https://bbs.pcbeta.com/forum.php?mod=ajax&action=deleteattach&inajax=yes&aids[]={attachmentId}&tid={ThreadId}&pid={PostId}&formhash={_formhash}";
             await _apiService.DeleteAttachmentAsync(deleteUrl);
             Debug.WriteLine($"✅ 服务器删除附件: aid={attachmentId}");
         }
@@ -1118,7 +1116,7 @@ public class EditOPReplyViewModel : INotifyPropertyChanged
     /// <summary>
     /// 获取页面认证参数
     /// </summary>
-    private async Task<(string formhash, string uid, string hash)> GetAuthenticationParamsAsync()
+    private async Task<(string formhash, string uid, string hash)> GetAuthenticationParamsAsync() 
     {
         try
         {
@@ -1230,7 +1228,7 @@ public class EditOPReplyViewModel : INotifyPropertyChanged
                 return;
             }
 
-            if (string.IsNullOrEmpty(Formhash) || string.IsNullOrEmpty(Posttime))
+            if (string.IsNullOrEmpty(_formhash) || string.IsNullOrEmpty(Posttime))
             {
                 await ShowErrorAlert("错误", "无法获取必要的编辑参数，请重新加载页面");
                 return;
@@ -1247,7 +1245,7 @@ public class EditOPReplyViewModel : INotifyPropertyChanged
                 PostId,
                 ThreadTitle,  // ✅ 新增：编辑楼主发帖需要标题
                 PostContent,
-                Formhash,
+                _formhash,
                 Posttime,
                 attachmentMetadataList,
                 // ✅ 新增：13个额外参数
@@ -1274,21 +1272,23 @@ public class EditOPReplyViewModel : INotifyPropertyChanged
                     await Shell.Current.GoToAsync("..");
                     Debug.WriteLine($"✅ 返回上一页");
 
-                    await Task.Delay(1000);
+                    /*
+                                         await Task.Delay(1000);
 
-                    if (Shell.Current.Navigation?.NavigationStack.Count > 0)
-                    {
-                        var lastPage = Shell.Current.Navigation.NavigationStack.LastOrDefault();
-                        if (lastPage is ThreadContentPage tcPage)
-                        {
-                            if (tcPage.BindingContext is ThreadContentViewModel tvm)
-                            {
-                                Debug.WriteLine($"🔄 调用刷新");
-                                await tvm.LoadThreadContentAsync();
-                                Debug.WriteLine($"✅ 刷新完成");
-                            }
-                        }
-                    }
+                                        if (Shell.Current.Navigation?.NavigationStack.Count > 0)
+                                        {
+                                            var lastPage = Shell.Current.Navigation.NavigationStack.LastOrDefault();
+                                            if (lastPage is ThreadContentPage tcPage)
+                                            {
+                                                if (tcPage.BindingContext is ThreadContentViewModel tvm)
+                                                {
+                                                    Debug.WriteLine($"🔄 调用刷新");
+                                                    await tvm.LoadThreadContentAsync();
+                                                    Debug.WriteLine($"✅ 刷新完成");
+                                                }
+                                            }
+                                        }
+                     */
                 }
                 catch (Exception navEx)
                 {

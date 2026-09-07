@@ -15,6 +15,40 @@
 
     <ContentPage.Resources>
         <ResourceDictionary>
+            <Style x:Key="BottomNaviButtonStyle" TargetType="Button">
+                <Setter Property="BackgroundColor" Value="Transparent"/>
+                <Setter Property="TextColor" Value="{AppThemeBinding Light=Black, Dark=White}"/>
+                <Setter Property="CornerRadius" Value="50"/>
+                <Setter Property="BorderWidth" Value="2"/>
+                <Setter Property="BorderColor" Value="LightBlue"/>
+                <Setter Property="Padding" Value="0"/>
+                <Setter Property="HeightRequest" Value="50"/>
+                <Setter Property="WidthRequest" Value="50"/>
+                <!--
+                                <Setter Property="VisualStateManager.VisualStateGroups">
+                    <VisualStateGroupList>
+                        <VisualStateGroup Name="CommonStates">
+                            <VisualState Name="Normal">
+                                <VisualState.Setters>
+                                    <Setter Property="BackgroundColor" Value="DodgerBlue"/>
+                                </VisualState.Setters>
+                            </VisualState>
+                            <VisualState Name="PointerOver">
+                                <VisualState.Setters>
+                                    <Setter Property="BackgroundColor" Value="SkyBlue"/>
+                                </VisualState.Setters>
+                            </VisualState>
+                            <VisualState Name="Pressed">
+                                <VisualState.Setters>
+                                    <Setter Property="BackgroundColor" Value="LightBlue"/>
+                                </VisualState.Setters>
+                            </VisualState>
+                        </VisualStateGroup>
+                    </VisualStateGroupList>
+                </Setter>
+                -->
+            </Style>
+            
             <!-- 删除按钮样式 -->
             <Style x:Key="DeleteButtonStyle" TargetType="Button">
                 <Setter Property="BackgroundColor" Value="#FF4444"/>
@@ -37,13 +71,13 @@
         </ResourceDictionary>
     </ContentPage.Resources>
 
-    <Grid RowDefinitions="*,Auto" Padding="0">
+    <Grid RowDefinitions="*,80" Padding="0">
         <!-- 主内容区 -->
         <ScrollView Grid.Row="0">
-            <VerticalStackLayout Padding="16" Spacing="16">
+            <VerticalStackLayout Padding="20,18" Spacing="18">
                 <!-- 发帖版块信息 -->
-                <Frame BorderColor="{AppThemeBinding Light=#E0E0E0, Dark=#3F3F3F}" 
-                       CornerRadius="8" 
+                    <Frame BorderColor="{AppThemeBinding Light=#E2E8F0, Dark=#334155}"  BackgroundColor="{AppThemeBinding Light=White, Dark=#202938}"
+                       CornerRadius="14" 
                        Padding="12" 
                        HasShadow="False">
                     <VerticalStackLayout Spacing="8">
@@ -68,7 +102,7 @@
                     <Picker x:Name="TypeIdPicker"
                             Title="选择主题分类"
                             TextColor="{AppThemeBinding Light=#000000, Dark=#FFFFFF}"
-                            BackgroundColor="{AppThemeBinding Light=#F5F5F5, Dark=#2F2F2F}"
+                             BackgroundColor="{AppThemeBinding Light=White, Dark=#202938}"
                             TitleColor="{AppThemeBinding Light=#999999, Dark=#AAAAAA}"
                             FontSize="14"
                             SelectedIndexChanged="OnTypeIdPickerSelectedIndexChanged"/>
@@ -96,11 +130,12 @@
                 <!-- 帖子内容编辑区 -->
                 <VerticalStackLayout Spacing="8">
                     <Label Text="帖子内容" FontSize="14" FontAttributes="Bold"/>
+                    <Label Text="你至少需要输入8个字" FontSize="12" TextColor="{AppThemeBinding Light=#999999, Dark=#AAAAAA}"/>
                     <Editor x:Name="PostContentEditor"
                             Text="{Binding PostContent}"
                             Placeholder="请输入帖子内容（至少8个字符）"
                             HeightRequest="200"
-                            BackgroundColor="{AppThemeBinding Light=#F5F5F5, Dark=#2F2F2F}"
+                            BackgroundColor="{AppThemeBinding Light=White, Dark=#202938}"
                             TextColor="{AppThemeBinding Light=#000000, Dark=#FFFFFF}"
                             PlaceholderColor="{AppThemeBinding Light=#999999, Dark=#666666}"/>
                     <Label Text="{Binding CharacterCount, StringFormat='已输入: {0} 字符'}" 
@@ -109,8 +144,8 @@
                 </VerticalStackLayout>
 
                 <!-- ✅ 新增：发帖参数区块（回帖选项、权限与奖励） -->
-                <Frame BorderColor="{AppThemeBinding Light=#E0E0E0, Dark=#3F3F3F}" 
-                       CornerRadius="8" 
+                <Frame BorderColor="{AppThemeBinding Light=#E2E8F0, Dark=#334155}"  BackgroundColor="{AppThemeBinding Light=White, Dark=#202938}"
+                       CornerRadius="14" 
                        Padding="12" 
                        HasShadow="False">
                     <VerticalStackLayout Spacing="12">
@@ -247,11 +282,11 @@
                             <DataTemplate>
                                 <VerticalStackLayout Spacing="8" Margin="0,4">
                                     <!-- 图片基本信息卡片 -->
-                                    <Frame BorderColor="{AppThemeBinding Light=#E0E0E0, Dark=#3F3F3F}"
+                                    <Frame BorderColor="{AppThemeBinding Light=#E0E0E0, Dark=#3F3F3F}"  BackgroundColor="{AppThemeBinding Light=#FAFAFA, Dark=#282828}"
                                            CornerRadius="6"
                                            Padding="8"
                                            HasShadow="False">
-                                        <HorizontalStackLayout Spacing="8" VerticalOptions="Center">
+                                        <Grid ColumnDefinitions="60,*,90" VerticalOptions="Center" Padding="4">
                                             <!-- 图片缩略图 -->
                                             <Image Source="{Binding LocalPath}"
                                                    WidthRequest="60"
@@ -259,11 +294,11 @@
                                                    Aspect="AspectFill"/>
 
                                             <!-- 图片信息 -->
-                                            <VerticalStackLayout Spacing="4" HorizontalOptions="FillAndExpand">
+                                            <VerticalStackLayout Spacing="4" HorizontalOptions="FillAndExpand" Margin="5,0" Grid.Column="1">
                                                 <Label Text="{Binding FileName}" 
                                                        FontSize="12" 
                                                        FontAttributes="Bold"
-                                                       LineBreakMode="TailTruncation"/>
+                                                       LineBreakMode="WordWrap"/>
                                                 <Label Text="{Binding FileSize, StringFormat='大小: {0}'}" 
                                                        FontSize="11"
                                                        TextColor="{AppThemeBinding Light=#999999, Dark=#AAAAAA}"/>
@@ -273,7 +308,7 @@
                                             </VerticalStackLayout>
 
                                             <!-- 操作按钮区 -->
-                                            <HorizontalStackLayout Spacing="4">
+                                            <HorizontalStackLayout Spacing="4" Grid.Column="2">
                                                 <!-- 插入按钮 -->
                                                 <Button Text="插入" 
                                                         Command="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.InsertImageCommand}"
@@ -292,7 +327,7 @@
                                                         WidthRequest="45"
                                                         Padding="0"/>
                                             </HorizontalStackLayout>
-                                        </HorizontalStackLayout>
+                                        </Grid>
                                     </Frame>
 
                                     <!-- ✅ 新增：附件元数据输入区域 -->
@@ -338,20 +373,20 @@
                             <DataTemplate>
                                 <VerticalStackLayout Spacing="8" Margin="0,4">
                                     <!-- 附件基本信息卡片 -->
-                                    <Frame BorderColor="{AppThemeBinding Light=#E0E0E0, Dark=#3F3F3F}"
+                                    <Frame BorderColor="{AppThemeBinding Light=#E0E0E0, Dark=#3F3F3F}"  BackgroundColor="{AppThemeBinding Light=#FAFAFA, Dark=#282828}"
                                            CornerRadius="6"
                                            Padding="8"
                                            HasShadow="False">
-                                        <HorizontalStackLayout Spacing="8" VerticalOptions="Center">
+                                        <Grid ColumnDefinitions="60,*,90" VerticalOptions="Center" Padding="4">
                                             <!-- 附件图标 -->
                                             <Label Text="📎" FontSize="24" WidthRequest="40"/>
 
                                             <!-- 附件信息 -->
-                                            <VerticalStackLayout Spacing="4" HorizontalOptions="FillAndExpand">
+                                            <VerticalStackLayout Spacing="4" HorizontalOptions="FillAndExpand" Margin="5,0" Grid.Column="1">
                                                 <Label Text="{Binding FileName}" 
                                                        FontSize="12" 
                                                        FontAttributes="Bold"
-                                                       LineBreakMode="TailTruncation"/>
+                                                       LineBreakMode="WordWrap"/>
                                                 <Label Text="{Binding FileSize, StringFormat='大小: {0}'}" 
                                                        FontSize="11"
                                                        TextColor="{AppThemeBinding Light=#999999, Dark=#AAAAAA}"/>
@@ -361,7 +396,7 @@
                                             </VerticalStackLayout>
 
                                             <!-- 操作按钮区 -->
-                                            <HorizontalStackLayout Spacing="4">
+                                            <HorizontalStackLayout Spacing="4" Grid.Column="2">
                                                 <!-- 插入按钮 -->
                                                 <Button Text="插入" 
                                                         Command="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.InsertAttachmentCommand}"
@@ -380,7 +415,7 @@
                                                         WidthRequest="45"
                                                         Padding="0"/>
                                             </HorizontalStackLayout>
-                                        </HorizontalStackLayout>
+                                        </Grid>
                                     </Frame>
 
                                     <!-- ✅ 新增：附件元数据输入区域 -->
@@ -444,20 +479,23 @@
         </ScrollView>
 
         <!-- 底部操作栏 -->
-        <HorizontalStackLayout Grid.Row="1" 
-                              Padding="16" 
-                              Spacing="8"
-                              BackgroundColor="{AppThemeBinding Light=#F8F8F8, Dark=#2F2F2F}">
-            <Button Text="取消" 
-                    Command="{Binding CancelCommand}"
-                    BackgroundColor="#CCCCCC"
-                    TextColor="Black"/>
-            <Button Text="发布" 
-                    Command="{Binding SubmitPostCommand}"
-                    BackgroundColor="#007AFF"
-                    TextColor="White"
-                    IsEnabled="{Binding IsSubmitEnabled}"
-                    Clicked="OnSubmitButtonClicked"/>
-        </HorizontalStackLayout>
+        <Grid ColumnDefinitions="*,*" Grid.Row="1" Padding="0,5" BackgroundColor="{AppThemeBinding Light=#F8F8F8, Dark=#2F2F2F}">
+            <StackLayout>
+                <Button Command="{Binding SubmitPostCommand}" IsEnabled="{Binding IsSubmitEnabled}" Style="{StaticResource BottomNaviButtonStyle}" Clicked="OnSubmitButtonClicked">
+                    <Button.ImageSource>
+                        <FontImageSource Glyph="&#xE73e;" Size="Medium" Color="{AppThemeBinding Light=Black, Dark=White}" FontFamily="Segoe Fluent Icons"/>
+                    </Button.ImageSource>
+                </Button>
+                <Label Text="发布" HorizontalOptions="Center" FontSize="12" TextColor="{AppThemeBinding Light=Black, Dark=White}"/>
+            </StackLayout>
+            <StackLayout Grid.Column="1">
+                <Button Command="{Binding CancelCommand}" Style="{StaticResource BottomNaviButtonStyle}">
+                    <Button.ImageSource>
+                        <FontImageSource Glyph="&#xE711;" Size="Medium" Color="{AppThemeBinding Light=Black, Dark=White}" FontFamily="Segoe Fluent Icons"/>
+                    </Button.ImageSource>
+                </Button>
+                <Label Text="放弃" HorizontalOptions="Center" FontSize="12" TextColor="{AppThemeBinding Light=Black, Dark=White}"/>
+            </StackLayout>
+        </Grid>
     </Grid>
 </ContentPage>

@@ -3,7 +3,8 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:PCBetaMAUI.ViewModels"
              x:Class="PCBetaMAUI.Views.SearchPage"
-             Title="搜索帖子">
+             Title="搜索帖子"
+             BackgroundColor="{AppThemeBinding Light=White, Dark=#1E1E1E}">
 
     <ContentPage.BindingContext>
         <vm:SearchViewModel />
@@ -11,12 +12,16 @@
     <ContentPage.Resources>
         <ResourceDictionary>
             <Style x:Key="BottomNaviButtonStyle" TargetType="Button">
-                <Setter Property="BackgroundColor" Value="DodgerBlue"/>
-                <Setter Property="TextColor" Value="White"/>
-                <Setter Property="CornerRadius" Value="0"/>
+                <Setter Property="BackgroundColor" Value="Transparent"/>
+                <Setter Property="TextColor" Value="{AppThemeBinding Light=Black, Dark=White}"/>
+                <Setter Property="CornerRadius" Value="50"/>
+                <Setter Property="BorderWidth" Value="2"/>
+                <Setter Property="BorderColor" Value="LightBlue"/>
                 <Setter Property="Padding" Value="0"/>
-                <Setter Property="HeightRequest" Value="30"/>
-                <Setter Property="VisualStateManager.VisualStateGroups">
+                <Setter Property="HeightRequest" Value="50"/>
+                <Setter Property="WidthRequest" Value="50"/>
+                <!--
+                                <Setter Property="VisualStateManager.VisualStateGroups">
                     <VisualStateGroupList>
                         <VisualStateGroup Name="CommonStates">
                             <VisualState Name="Normal">
@@ -37,16 +42,21 @@
                         </VisualStateGroup>
                     </VisualStateGroupList>
                 </Setter>
+                -->
             </Style>
         </ResourceDictionary>
     </ContentPage.Resources>
     
-    <Grid RowDefinitions="120,*,50" Padding="8,2">
+    <Grid RowDefinitions="136,*,80" Padding="12,8" BackgroundColor="{AppThemeBinding Light=#F6F8FC, Dark=#151A24}">
 
         <!-- Top: Search box -->
-        <Grid Grid.Row="0" RowDefinitions="*,*" ColumnDefinitions="*,120" VerticalOptions="Center">
-            <Entry Text="{Binding SearchText}" Placeholder="请输入查找内容" />
-            <Button Text="查询最新数据" Background="DodgerBlue" Command="{Binding SearchCommand}" HorizontalOptions="End" Grid.Column="1"/>
+        <Grid Grid.Row="0" RowDefinitions="*,*" ColumnDefinitions="*,100" VerticalOptions="Center">
+            <Entry Text="{Binding SearchText}" Placeholder="请输入查找内容" BackgroundColor="{AppThemeBinding Light=White, Dark=#202938}" />
+            <Button Text="立即搜" Background="DodgerBlue" Command="{Binding SearchCommand}" HorizontalOptions="End" Grid.Column="1">
+                <Button.ImageSource>
+                    <FontImageSource Glyph="&#xE773;" Size="Medium" Color="{AppThemeBinding Light=White, Dark=Black}" FontFamily="Segoe Fluent Icons"/>
+                </Button.ImageSource>
+            </Button>
 
             <HorizontalStackLayout Grid.Row="1">
                 <RadioButton Content="按用户回复时间" IsChecked="{Binding IsLastPostChecked}" GroupName="OrderbyType"/>
@@ -61,7 +71,7 @@
             </CollectionView.ItemsLayout>
             <CollectionView.ItemTemplate>
                 <DataTemplate>
-                    <Frame Padding="12" Margin="6" CornerRadius="8" HasShadow="True" BorderColor="#E0E0E0">
+                    <Frame Padding="16" Margin="2,4" CornerRadius="14" HasShadow="False" BorderColor="{AppThemeBinding Light=#E2E8F0, Dark=#334155}" BackgroundColor="{AppThemeBinding Light=White, Dark=#202938}">
                         <Frame.GestureRecognizers>
                             <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.SelectThreadCommand}" CommandParameter="{Binding .}"/>
                         </Frame.GestureRecognizers>
@@ -72,13 +82,14 @@
                                 Text="{Binding Title}" 
                                 FontAttributes="Bold" 
                                 FontSize="14"
+                                TextColor="{AppThemeBinding Light=Black, Dark=White}"
                                 LineBreakMode="TailTruncation"
                                 MaxLines="2" />
 
                                 <Label 
                                 Text="{Binding PreviewContent}" 
                                 FontSize="12"
-                                TextColor="#555555"
+                                TextColor="{AppThemeBinding Light=#555555, Dark=#CCCCCC}"
                                 LineBreakMode="TailTruncation"
                                 MaxLines="2" Grid.Row="1" Margin="0,12"/>
 
@@ -87,14 +98,14 @@
                                     <Label 
                                     Text="{Binding ForumName}" 
                                     FontSize="11"
-                                    TextColor="#FF6B6B"
+                                    TextColor="{AppThemeBinding Light=#FF6B6B, Dark=#FFB3B3}"
 
                                     LineBreakMode="TailTruncation" />
                                     <!-- Author -->
                                     <Label 
                                   Text="{Binding Author, StringFormat='作者: {0}'}" 
                                   FontSize="10"
-                                  TextColor="Gray"
+                                  TextColor="{AppThemeBinding Light=Gray, Dark=#CCCCCC}"
                                   VerticalOptions="Center"
                                   LineBreakMode="TailTruncation" Grid.Column="1"/>
 
@@ -105,7 +116,7 @@
 
                             <Grid RowDefinitions="*,*,*" Grid.Column="1" >
                                 <!-- Thread ID (hidden but available) -->
-                                <Label Text="{Binding Id, StringFormat='ID {0}'}"  FontSize="12" TextColor="#AAAAAA"  HorizontalOptions="End"/>
+                                <Label Text="{Binding Id, StringFormat='ID {0}'}"  FontSize="12" TextColor="{AppThemeBinding Light=#AAAAAA, Dark=#CCCCCC}"  HorizontalOptions="End"/>
 
                                 <Grid ColumnDefinitions="*,*" Margin="0,12" Grid.Row="1" >
                                     <!-- Replies Count -->
@@ -114,12 +125,12 @@
                                         Text="{Binding Replies}" 
                                         FontAttributes="Bold"
                                         FontSize="12"
-                                        TextColor="#4C6EF5"
+                                        TextColor="{AppThemeBinding Light=#4C6EF5, Dark=#7FA3FF}"
                                         HorizontalTextAlignment="Center"          />
                                         <Label 
                                         Text="回复" 
                                         FontSize="10"
-                                        TextColor="Gray"
+                                        TextColor="{AppThemeBinding Light=Gray, Dark=#CCCCCC}"
                                         HorizontalTextAlignment="Center" />
                                     </VerticalStackLayout>
 
@@ -129,19 +140,19 @@
                                         Text="{Binding Views}" 
                                         FontAttributes="Bold"
                                         FontSize="12"
-                                        TextColor="#51CF66"
+                                        TextColor="{AppThemeBinding Light=#51CF66, Dark=#8FE6A1}"
                                         HorizontalTextAlignment="Center" />
                                         <Label 
                                         Text="查看" 
                                         FontSize="10"
-                                        TextColor="Gray"
+                                        TextColor="{AppThemeBinding Light=Gray, Dark=#CCCCCC}"
                                         HorizontalTextAlignment="Center" />
                                     </VerticalStackLayout>
                                 </Grid>
 
                                 <!-- PostTime -->
                                 <Label Text="{Binding PostTime, StringFormat='发布时间 {0:yyyy-MM-dd HH:mm}'}" 
-                 FontSize="10" TextColor="#999999" Grid.Row="2" HorizontalOptions="End" VerticalOptions="End"/>
+                 FontSize="10" TextColor="{AppThemeBinding Light=#999999, Dark=#BBBBBB}" Grid.Row="2" HorizontalOptions="End" VerticalOptions="End"/>
                             </Grid>
 
                         </Grid>
@@ -158,7 +169,14 @@
         </Grid>
 
         <Grid Grid.Row="2">
-            <Button Text="刷新"  Style="{StaticResource BottomNaviButtonStyle}" VerticalOptions="End" Command="{Binding RefreshCommand}"/>
+            <StackLayout VerticalOptions="End">
+                <Button Command="{Binding RefreshCommand}" Style="{StaticResource BottomNaviButtonStyle}">
+                    <Button.ImageSource>
+                        <FontImageSource Glyph="&#xE72c;" Size="Medium" Color="{AppThemeBinding Light=Black, Dark=White}" FontFamily="Segoe Fluent Icons"/>
+                    </Button.ImageSource>
+                </Button>
+                <Label Text="刷新" HorizontalOptions="Center" FontSize="12" TextColor="{AppThemeBinding Light=Black, Dark=White}"/>
+            </StackLayout>
         </Grid>
     </Grid>
 </ContentPage>

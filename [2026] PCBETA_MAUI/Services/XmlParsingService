@@ -1,6 +1,5 @@
 using PCBetaMAUI.Models;
 using System.Diagnostics;
-using System.Net.Mail;
 using System.Reflection.Metadata;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -396,160 +395,6 @@ public partial class XmlParsingService
         return results;
     }
 
-    /// <summary>
-    /// 解析“我发布的”页面 HTML 内容，返回 ThreadInfo 列表
-    /// 该页面使用表格<tr>行展示每条帖子，若页面包含“还没有相关的帖子”则返回空列表
-    /// 示例结构见 WebAch/MyPostPage.xml
-    /// </summary>
-    public List<ThreadInfo> ParseMyPosts(string xmlResponse, bool includeComments = false)
-    {
-        var list = new List<ThreadInfo>();
-
-        try
-        {
-            // 先检测错误信息或未登录提示
-            var errorMsg = ExtractErrorMessageFromResponse(xmlResponse);
-            if (!string.IsNullOrEmpty(errorMsg))
-            {
-                list.Add(new ThreadInfo { Id = "ERROR", Title = errorMsg });
-                return list;
-            }
-
-            // 提取 CDATA 内容
-            string htmlContent = xmlResponse;
-            try
-            {
-                var doc = XDocument.Parse(xmlResponse);
-                var root = doc.Root;
-                var extracted = ExtractCDataContent(root);
-                if (!string.IsNullOrEmpty(extracted))
-                    htmlContent = extracted;
-            }
-            catch { /* 使用原始 xmlResponse */ }
-
-            // 无数据提示
-            if (htmlContent.Contains("还没有相关的帖子"))
-            {
-                return list; // empty
-            }
-
-            // 按顺序匹配表格行。回复页面中，bw0_all 行是主题，后续普通行是该主题的评论。
-            var trPattern = @"<tr([^>]*)>(.*?)</tr>";
-            var trMatches = Regex.Matches(htmlContent, trPattern, RegexOptions.IgnoreCase | RegexOptions.Singleline);
-            ThreadInfo? currentThread = null;
-
-            foreach (Match tr in trMatches)
-            {
-                try
-                {
-                    var attributes = tr.Groups[1].Value;
-                    var row = tr.Groups[2].Value;
-
-                    if (includeComments)
-                    {
-                        if (Regex.IsMatch(attributes, @"class=""[^""]*\bth\b[^""]*""", RegexOptions.IgnoreCase))
-                            continue;
-
-                        var isThreadRow = Regex.IsMatch(attributes, @"class=""[^""]*\bbw0_all\b[^""]*""", RegexOptions.IgnoreCase);
-                        if (!isThreadRow)
-                        {
-                            if (currentThread != null)
-                            {
-                                var commentMatch = Regex.Match(row, @"<td[^>]*class=""[^""]*\bxg1\b[^""]*""[^>]*>(.*?)</td>", RegexOptions.IgnoreCase | RegexOptions.Singleline);
-                                if (commentMatch.Success)
-                                {
-                                    var comment = Regex.Replace(commentMatch.Groups[1].Value, "<.*?>", " ");
-                                    comment = Regex.Replace(HtmlDecode(comment), @"\s+", " ").Trim();
-                                    if (!string.IsNullOrEmpty(comment))
-                                        currentThread.CommentContents.Add(comment);
-                                }
-                            }
-
-                            continue;
-                        }
-                    }
-
-                    // 标题和链接（在 <th> 内）
-                    var titleMatch = Regex.Match(row, @"<th[^>]*>.*?<a[^>]*href=""([^""]*)""[^>]*>(.*?)</a>.*?</th>", RegexOptions.IgnoreCase | RegexOptions.Singleline);
-                    if (!titleMatch.Success)
-                        continue;
-
-                    var url = HtmlDecode(titleMatch.Groups[1].Value.Trim());
-                    var titleHtml = titleMatch.Groups[2].Value;
-                    var title = Regex.Replace(titleHtml, "<.*?>", "");
-                    title = HtmlDecode(title).Trim();
-
-                    // 论坛名
-                    var forumMatch = Regex.Match(row, @"<td[^>]*>\s*<a[^>]*class=""xg1""[^>]*>([^<]+)</a>\s*</td>", RegexOptions.IgnoreCase);
-                    var forumName = forumMatch.Success ? HtmlDecode(forumMatch.Groups[1].Value.Trim()) : string.Empty;
-
-                    // 回复/查看
-                    var statsMatch = Regex.Match(row, @"<td[^>]*class=""num""[^>]*>.*?<a[^>]*>(\d+)</a>\s*<em>(\d+)</em>", RegexOptions.IgnoreCase | RegexOptions.Singleline);
-                    int replies = 0, views = 0;
-                    if (statsMatch.Success)
-                    {
-                        int.TryParse(statsMatch.Groups[1].Value, out replies);
-                        int.TryParse(statsMatch.Groups[2].Value, out views);
-                    }
-
-                    // 作者和时间
-                    var authorMatch = Regex.Match(row, @"<cite>\s*<a[^>]*>([^<]+)</a>\s*</cite>", RegexOptions.IgnoreCase);
-                    var author = authorMatch.Success ? HtmlDecode(authorMatch.Groups[1].Value.Trim()) : string.Empty;
-
-                    var timeMatch = Regex.Match(row, @"<em>\s*<a[^>]*>([0-9\- :]{8,})</a>\s*</em>", RegexOptions.IgnoreCase);
-                    DateTime postTime = DateTime.Now;
-                    if (timeMatch.Success)
-                    {
-                        var ts = timeMatch.Groups[1].Value.Trim();
-                        if (DateTime.TryParse(ts, out var dt)) postTime = dt;
-                    }
-
-                    // 主题页从 viewthread- 或 tid= 提取帖子 ID；回复页从 ptid= 提取帖子 ID。
-                    string threadId = string.Empty;
-                    Match idMatch;
-                    if (includeComments)
-                    {
-                        idMatch = Regex.Match(url, @"[?&]ptid=(\d+)", RegexOptions.IgnoreCase);
-                    }
-                    else
-                    {
-                        idMatch = Regex.Match(url, @"viewthread-(\d+)", RegexOptions.IgnoreCase);
-                        if (!idMatch.Success)
-                            idMatch = Regex.Match(url, @"[?&]tid=(\d+)", RegexOptions.IgnoreCase);
-                    }
-                    if (idMatch.Success) threadId = idMatch.Groups[1].Value.Trim();
-
-                    var thread = new ThreadInfo
-                    {
-                        Id = string.IsNullOrEmpty(threadId) ? Guid.NewGuid().ToString() : threadId,
-                        Url = url,
-                        Title = title,
-                        Author = author,
-                        Category = forumName,
-                        PostTime = postTime,
-                        Replies = replies,
-                        Views = views,
-                        IsReply = includeComments
-                    };
-
-                    list.Add(thread);
-                    currentThread = thread;
-                }
-                catch (Exception ex)
-                {
-                    Debug.WriteLine($"ParseMyPosts single row error: {ex.Message}");
-                    continue;
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            Debug.WriteLine($"ParseMyPosts error: {ex.Message}");
-        }
-
-        return list;
-    }
-
     public string GetSearchID(string html)
     {
         var pattern = $"searchid=(.*?)&";
@@ -761,29 +606,28 @@ public partial class XmlParsingService
                             {
                                 timage1.LogoUrl = "common_255_icon.png";
                             }
-                            var timage2 = sections.FirstOrDefault(p => p.LogoUrl.Contains("common_520_icon"));
-                            if (timage2 != null)
-                            {
-                                timage2.LogoUrl = "common_520_icon.png";
-                            }
-                            var timage3 = sections.FirstOrDefault(p => p.LogoUrl.Contains("common_568_icon"));
-                            if (timage3 != null)
-                            {
-                                timage3.LogoUrl = "common_568_icon.png";
-                            }
                         }
                         else if (categoryId == "106")
                         {
                             var timage1 = sections.FirstOrDefault(p => p.LogoUrl.Contains("common_518_icon"));
                             if (timage1 != null)
                             {
+#if WINDOWS
+                                timage1.LogoUrl = "pcbeta_logo_threadicon.png";
+#else
                                 timage1.LogoUrl = "common_518_icon.png";
+#endif
 
                             }
                             var timage2 = sections.FirstOrDefault(p => p.LogoUrl.Contains("common_76_icon"));
                             if (timage2 != null)
                             {
+#if WINDOWS
+                                timage2.LogoUrl = "pcbeta_logo_threadicon.png";
+#else
                                 timage2.LogoUrl = "common_76_icon.png";
+#endif
+
                             }
                             var timage3 = sections.FirstOrDefault(p => p.LogoUrl.Contains("common_210_icon")); //共用logo
                             if (timage3 != null)
@@ -818,7 +662,11 @@ public partial class XmlParsingService
                             var timage4 = sections.FirstOrDefault(p => p.LogoUrl.Contains("common_555_icon"));
                             if (timage4 != null)
                             {
+#if WINDOWS
+                                timage4.LogoUrl = "pcbeta_logo_threadicon.png";
+#else
                                 timage4.LogoUrl = "common_555_icon.png";
+#endif
 
                             }
                          }
@@ -1319,99 +1167,7 @@ public partial class XmlParsingService
                             views = v;
                     }
 
-                    // Determine Category (extract from <em>[<a>...</a>]</em> if present)
-                    var category = "[讨论]"; // default
-                    try
-                    {
-                        var catPattern = @"<em>\s*\[\s*<a[^>]*>(.*?)</a>\s*\]\s*</em>";
-                        var catMatch = Regex.Match(threadHtml, catPattern, RegexOptions.IgnoreCase | RegexOptions.Singleline);
-                        if (catMatch.Success && catMatch.Groups.Count > 1)
-                        {
-                            var rawCat = Regex.Replace(catMatch.Groups[1].Value, "<.*?>", "");
-                            rawCat = HtmlDecode(rawCat).Trim();
-                            if (!string.IsNullOrEmpty(rawCat))
-                            {
-                                category = rawCat.StartsWith("[") && rawCat.EndsWith("]") ? rawCat : $"[{rawCat}]";
-                            }
-                        }
-                    }
-                    catch { }
-
-                    // === 新增：解析 <td class="icn"> 区域，提取图标信息（支持多个图标） ===
-                    var icons = new List<string>();
-                    try
-                    {
-                        var icnPattern = "<td[^>]*class=\\\"[^\\\"]*icn[^\\\"]*\\\"[^>]*>(.*?)</td>";
-                        var icnMatch = Regex.Match(threadHtml, icnPattern, RegexOptions.IgnoreCase | RegexOptions.Singleline);
-                        var icnHtml = icnMatch.Success ? icnMatch.Groups[1].Value : string.Empty;
-
-                        if (!string.IsNullOrEmpty(icnHtml))
-                        {
-                            // 锁定帖：检查 title 或 class
-                            if (icnHtml.Contains("关闭的主题") || icnHtml.Contains("fico-lock"))
-                                icons.Add("\uD83D\uDD12");
-
-                            // 投票帖
-                            if (icnHtml.Contains("投票") || icnHtml.Contains("fico-vote"))
-                                icons.Add("\uD83D\uDDF3️");
-
-                            // 悬赏帖
-                            if (icnHtml.Contains("悬赏") || icnHtml.Contains("fico-reward"))
-                                icons.Add("\uD83D\uDCB0");
-
-                            // 辩论贴
-                            if (icnHtml.Contains("辩论") || icnHtml.Contains("fico-vs"))
-                                icons.Add("\uD83C\uDD9A");
-                        }
-                    }
-                    catch { }
-
-                    // === 新增：解析阅读权限（示例： - [阅读权限 <span class="xw1">10</span>]），提取数字并格式化为 [阅读权限 10] ===
-                    var readPrem = string.Empty;
-                    try
-                    {
-                        var readPattern = @"阅读权限\s*<span[^>]*class\s*=\s*""xw1""[^>]*>(\d+)</span>";
-                        var readMatch = Regex.Match(threadHtml, readPattern, RegexOptions.IgnoreCase | RegexOptions.Singleline);
-                        if (readMatch.Success && readMatch.Groups.Count > 1)
-                        {
-                            var num = readMatch.Groups[1].Value.Trim();
-                            readPrem = $"[阅读权限 {num}]";
-                        }
-                    }
-                    catch { }
-
-                    // === 新增：解析帖子印章（stamp）图像 src，并拼接 ApiService.BaseUrl 若为相对路径 ===
-                    var stampUrl = string.Empty;
-                    try
-                    {
-                        var stampPattern = @"<img[^>]*src\s*=\s*""([^""]*static/image/stamp/[^""]*)""[^>]*>";
-                        var stampMatch = Regex.Match(threadHtml, stampPattern, RegexOptions.IgnoreCase | RegexOptions.Singleline);
-                        if (stampMatch.Success && stampMatch.Groups.Count > 1)
-                        {
-                            var src = stampMatch.Groups[1].Value.Trim();
-                            if (!string.IsNullOrEmpty(src))
-                            {
-                                stampUrl = src.StartsWith("http", StringComparison.OrdinalIgnoreCase) ? src : ApiService.BaseUrl.TrimEnd('/') + "/" + src.TrimStart('/');
-                            }
-                        }
-                    }
-                    catch { }
-
-                    // === 新增：解析回帖奖励，例如：<span class="xi1">[回帖奖励 <strong> 564</strong> ]</span>
-                    var replyCredit = string.Empty;
-                    try
-                    {
-                        var replyPattern = @"回帖奖励\s*<\s*strong[^>]*>\s*(\d+)\s*</\s*strong>";
-                        var replyMatch = Regex.Match(threadHtml, replyPattern, RegexOptions.IgnoreCase | RegexOptions.Singleline);
-                        if (replyMatch.Success && replyMatch.Groups.Count > 1)
-                        {
-                            var num = replyMatch.Groups[1].Value.Trim();
-                            if (!string.IsNullOrEmpty(num))
-                                replyCredit = $"[还剩{num}PB币]";
-                        }
-                    }
-                    catch { }
-
+                    // Create ThreadInfo object
                     var thread = new ThreadInfo
                     {
                         Id = threadId,
@@ -1421,12 +1177,8 @@ public partial class XmlParsingService
                         PostTime = postTime,
                         Replies = replies,
                         Views = views,
-                        Category = category,
-                        IsSticky = isSticky,  //  设置是否为置顶帖
-                        Icons = icons,
-                        ReadPrem = readPrem,
-                        StampUrl = stampUrl,
-                        Replycredit=replyCredit
+                        Category = "[讨论]",  // Default category
+                        IsSticky = isSticky   //  设置是否为置顶帖
                     };
 
                     threads.Add(thread);
@@ -1499,23 +1251,6 @@ public partial class XmlParsingService
             // 提取楼主的内容范围：从第一个 <div id="post_*"> 开始，到下一个 <div id="post_*"> 结束
             var threadOwnerContent = ExtractThreadOwnerContent(htmlContent);
 
-            if (currentPage == 1 && !string.IsNullOrEmpty(threadOwnerContent))
-            {
-                content.Poll = ExtractPollFromHtml(threadOwnerContent);
-            }
-
-            // 提取楼主顶部回帖奖励。
-            // pl_top 位于第一个 post_* 之前，因此必须从整页 htmlContent 独立解析，
-            // 不能使用只包含楼主正文的 threadOwnerContent。
-            var rewardPattern = @"<div[^>]*id=""pl_top""[^>]*>.*?<td[^>]*class\s*=\s*[""'](?=[^""']*\bplc\b)(?=[^""']*\bptm\b)(?=[^""']*\bpbm\b)(?=[^""']*\bxi1\b)[^""']*[""'][^>]*>(?<reward>.*?)</td>";
-            var rewardMatch = Regex.Match(htmlContent, rewardPattern, RegexOptions.IgnoreCase | RegexOptions.Singleline);
-            if (rewardMatch.Success)
-            {
-                var rewardText = HtmlDecode(StripHtmlTags(rewardMatch.Groups["reward"].Value));
-                content.ReplyRewardText = Regex.Replace(rewardText, @"\s+", " ").Trim();
-                Debug.WriteLine($"✅ 提取楼主回帖奖励: {content.ReplyRewardText}");
-            }
-
             //  新增：提取编辑状态信息 - 格式：<i class="pstatus"> 本帖最后由 用户名 于 日期 编辑 </i>
             if (!string.IsNullOrEmpty(threadOwnerContent))
             {
@@ -1527,7 +1262,6 @@ public partial class XmlParsingService
                     content.EditStatus = $"本帖最后由 {editedBy} 于 {editedAt} 编辑";
                     Debug.WriteLine($" 提取编辑状态: {content.EditStatus}");
                 }
-
             }
 
             //  新增：提取编辑按钮URL - 用于"编辑楼主发帖"功能
@@ -1570,7 +1304,7 @@ public partial class XmlParsingService
             if (!string.IsNullOrEmpty(messageHtml))
             {
                 // 4. 使用富文本解析器解析内容（删除编辑状态，因为已在上层单独提取并显示）
-                content.ContentElements = ParseRichTextContent(threadOwnerContent, messageHtml, skipEditStatus: false);
+                content.ContentElements = ParseRichTextContent(messageHtml, skipEditStatus: false);
 
                 // 5. 生成纯文本版本（用于搜索、索引等）
                 content.PlainTextContent = GeneratePlainText(content.ContentElements);
@@ -1581,27 +1315,8 @@ public partial class XmlParsingService
                 var pattlAttachments = ExtractAllPattlAttachments(threadOwnerContent);
                 if (pattlAttachments != null && pattlAttachments.Count > 0)
                 {
-                    var existingImageAids = content.ContentElements
-                        .Where(element => element.Type == ContentElementType.Image && !string.IsNullOrEmpty(element.AttachmentId))
-                        .Select(element => element.AttachmentId!)
-                        .ToHashSet(StringComparer.OrdinalIgnoreCase);
-                    var newAttachments = new List<ContentElement>();
-
-                    foreach (var attachment in pattlAttachments)
-                    {
-                        if (attachment.Type == ContentElementType.Image &&
-                            !string.IsNullOrEmpty(attachment.AttachmentId) &&
-                            !existingImageAids.Add(attachment.AttachmentId))
-                        {
-                            Debug.WriteLine($" 跳过重复图片附件: {attachment.AttachmentId}");
-                            continue;
-                        }
-
-                        newAttachments.Add(attachment);
-                    }
-
-                    content.ContentElements.AddRange(newAttachments);
-                    Debug.WriteLine($" 从 pattl 容器添加 {newAttachments.Count} 个附件到内容元素，跳过重复图片 {pattlAttachments.Count - newAttachments.Count} 个");
+                    content.ContentElements.AddRange(pattlAttachments);
+                    Debug.WriteLine($" 从 pattl 容器添加 {pattlAttachments.Count} 个附件到内容元素");
                 }
             }
 
@@ -1704,109 +1419,6 @@ public partial class XmlParsingService
     /// Uses tag counting approach instead of naive regex to find the correct closing &lt;/td&gt;
     /// Pattern: finds &lt;td class="t_f" id="postmessage_\d+"&gt; and extracts until matching &lt;/td&gt;
     /// </summary>
-    private PollInfo? ExtractPollFromHtml(string htmlContent)
-    {
-        var formMatch = Regex.Match(htmlContent, @"<form\b[^>]*\bid=[""']poll[""'][^>]*>(?<form>.*?)</form>", RegexOptions.IgnoreCase | RegexOptions.Singleline);
-        if (!formMatch.Success)
-            return null;
-
-        var form = formMatch.Groups["form"].Value;
-        var poll = new PollInfo
-        {
-            SubmitUrl = HtmlDecode(Regex.Match(formMatch.Value, @"\baction=[""']([^""']+)", RegexOptions.IgnoreCase).Groups[1].Value),
-            FormHash = Regex.Match(form, @"name=[""']formhash[""'][^>]*value=[""']([^""']+)", RegexOptions.IgnoreCase).Groups[1].Value
-        };
-
-        var pinf = Regex.Match(form, @"<div[^>]*class=[""'][^""']*pinf[^""']*[""'][^>]*>(.*?)</div>", RegexOptions.IgnoreCase | RegexOptions.Singleline);
-        poll.Summary = HtmlDecode(StripHtmlTags(pinf.Groups[1].Value)).Trim();
-        poll.IsMultiple = poll.Summary.Contains("多选", StringComparison.Ordinal);
-        var maxChoices = 0;
-        var maxMatch = Regex.Match(poll.Summary, @"最多可选\s*(\d+)");
-        if (maxMatch.Success)
-            int.TryParse(maxMatch.Groups[1].Value, out maxChoices);
-        poll.MaxChoices = maxChoices;
-
-        var endMatch = Regex.Match(form, @"<p[^>]*class=[""'][^""']*ptmr[^""']*[""'][^>]*>(.*?)</p>", RegexOptions.IgnoreCase | RegexOptions.Singleline);
-        poll.EndTimeText = endMatch.Success ? HtmlDecode(StripHtmlTags(endMatch.Groups[1].Value)).Trim() : string.Empty;
-        poll.CanVote = Regex.IsMatch(form, @"<button[^>]*id=[""']pollsubmit[""'](?![^>]*disabled)", RegexOptions.IgnoreCase);
-
-        foreach (Match input in Regex.Matches(form, @"<input\b(?=[^>]*name=[""']pollanswers\[\][""'])(?=[^>]*value=[""']([^""']+)[""'])[^>]*>", RegexOptions.IgnoreCase))
-        {
-            var option = new PollOption { Id = HtmlDecode(input.Groups[1].Value) };
-            var afterInput = form[(input.Index + input.Length)..];
-            var label = Regex.Match(afterInput, @"<label[^>]*>\s*(.*?)</label>", RegexOptions.IgnoreCase | RegexOptions.Singleline);
-            option.Text = label.Success ? HtmlDecode(StripHtmlTags(label.Groups[1].Value)).Trim() : option.Id;
-            AddPollResult(afterInput, option);
-            poll.Options.Add(option);
-        }
-
-        if (poll.Options.Count == 0)
-        {
-            var labelMatches = Regex.Matches(form, @"<label[^>]*for=[""']option_(\d+)[""'][^>]*>\s*(.*?)</label>", RegexOptions.IgnoreCase | RegexOptions.Singleline);
-            for (var index = 0; index < labelMatches.Count; index++)
-            {
-                var labelMatch = labelMatches[index];
-                var segmentStart = labelMatch.Index + labelMatch.Length;
-                var segmentEnd = index + 1 < labelMatches.Count
-                    ? labelMatches[index + 1].Index
-                    : form.Length;
-                var segment = form[segmentStart..segmentEnd];
-                var option = new PollOption
-                {
-                    Id = labelMatch.Groups[1].Value,
-                    Text = HtmlDecode(StripHtmlTags(labelMatch.Groups[2].Value)).Trim()
-                };
-                AddPollResult(segment, option);
-                poll.Options.Add(option);
-            }
-        }
-
-        if (poll.Options.Count == 0)
-        {
-            foreach (Match optionCell in Regex.Matches(form, @"<td[^>]*id=[""']polloption_(\d+)[""'][^>]*>(.*?)</td>", RegexOptions.IgnoreCase | RegexOptions.Singleline))
-            {
-                var option = new PollOption { Id = optionCell.Groups[1].Value };
-                var cell = optionCell.Groups[2].Value;
-                var image = Regex.Match(cell, @"<img[^>]*src=[""']([^""']+)", RegexOptions.IgnoreCase);
-                option.ImageUrl = image.Success ? HtmlDecode(image.Groups[1].Value) : null;
-                var text = Regex.Match(cell, @"<p[^>]*>\s*(.*?)</p>", RegexOptions.IgnoreCase | RegexOptions.Singleline);
-                option.Text = text.Success ? HtmlDecode(StripHtmlTags(text.Groups[1].Value)).Trim() : option.Id;
-                AddPollResult(cell, option);
-                poll.Options.Add(option);
-            }
-        }
-
-        var submitNotice = Regex.Match(form, @"</button>\s*(?<notice>[^<]+)", RegexOptions.IgnoreCase | RegexOptions.Singleline);
-        if (submitNotice.Success)
-        {
-            poll.Notice = HtmlDecode(submitNotice.Groups["notice"].Value).Trim();
-        }
-        else
-        {
-            var notice = Regex.Match(form, @"<td[^>]*colspan=[""'][^""']+[""'][^>]*>(?<notice>.*?)</td>", RegexOptions.IgnoreCase | RegexOptions.Singleline);
-            poll.Notice = notice.Success ? HtmlDecode(StripHtmlTags(notice.Groups["notice"].Value)).Trim() : string.Empty;
-        }
-        return poll.Options.Count > 0 ? poll : null;
-    }
-
-    private void AddPollResult(string html, PollOption option)
-    {
-        var result = Regex.Match(html, @"(?<percent>\d+(?:\.\d+)?)%.*?\((?<count>\d+)\)", RegexOptions.IgnoreCase | RegexOptions.Singleline);
-        if (result.Success)
-        {
-            double.TryParse(result.Groups["percent"].Value, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var percent);
-            int.TryParse(result.Groups["count"].Value, out var count);
-            option.Percentage = percent;
-            option.VoteCount = count;
-        }
-        else
-        {
-            var imageResult = Regex.Match(html, @"<span[^>]*class=[""'][^""']*z[^""']*[""'][^>]*>\s*(\d+)票", RegexOptions.IgnoreCase);
-            if (imageResult.Success && int.TryParse(imageResult.Groups[1].Value, out var count))
-                option.VoteCount = count;
-        }
-    }
-
     private string ExtractMessageContent(string htmlContent)
     {
         try
@@ -1888,7 +1500,7 @@ public partial class XmlParsingService
     /// 注意：pattl div（版主操作后的附件容器）不在这个方法的处理范围内
     /// pattl div 应在 ExtractThreadContentFromHtml() 中单独处理
     /// </summary>
-    private List<ContentElement> ParseRichTextContent(string fullhtml , string htmlContent, bool skipEditStatus = false)
+    private List<ContentElement> ParseRichTextContent(string htmlContent, bool skipEditStatus = false)
     {
         var elements = new List<ContentElement>();
         string originalHtmlContent = htmlContent;  //  保存原始内容用于日期提取
@@ -1956,8 +1568,6 @@ public partial class XmlParsingService
                 }
             }
 
-            AddAttachmentPreviewImages(fullhtml, elements);
-
             Debug.WriteLine($" 解析富文本内容完成，共 {elements.Count} 个元素");
         }
         catch (Exception ex)
@@ -1966,84 +1576,6 @@ public partial class XmlParsingService
         }
 
         return elements;
-    }
-
-    private void AddAttachmentPreviewImages(string htmlContent, List<ContentElement> elements)
-    {
-        try
-        {
-            var imageTags = Regex.Matches(
-                htmlContent,
-                @"<img\b[^>]*\b(?:file|zoomfile)\s*=\s*[\""'][^\""']+[\""'][^>]*>",
-                RegexOptions.IgnoreCase | RegexOptions.Singleline);
-
-            foreach (Match imageTag in imageTags)
-            {
-                var imageElement = ParseImageTag(imageTag.Value);
-                if (imageElement == null || string.IsNullOrWhiteSpace(imageElement.Url))
-                    continue;
-
-                imageElement.AttachmentId = ExtractAttachmentIdForPreview(
-                    htmlContent,
-                    imageTag.Index,
-                    imageTag.Length);
-
-                var existingImage = elements.FirstOrDefault(element =>
-                    element.Type == ContentElementType.Image &&
-                    string.Equals(element.Url, imageElement.Url, StringComparison.OrdinalIgnoreCase));
-                if (existingImage != null)
-                {
-                    if (string.IsNullOrEmpty(existingImage.AttachmentId))
-                        existingImage.AttachmentId = imageElement.AttachmentId;
-                    continue;
-                }
-
-                elements.Add(imageElement);
-                Debug.WriteLine($"🖼️ 补充图片附件预览: {imageElement.Url}");
-            }
-        }
-        catch (Exception ex)
-        {
-            Debug.WriteLine($"⚠️ 补充图片附件预览失败: {ex.Message}");
-        }
-    }
-
-    private string? ExtractAttachmentIdForPreview(string htmlContent, int imageIndex, int imageLength)
-    {
-        try
-        {
-            var blockStart = htmlContent.LastIndexOf("<ignore_js_op", imageIndex, StringComparison.OrdinalIgnoreCase);
-            var blockEnd = htmlContent.IndexOf("</ignore_js_op>", imageIndex + imageLength, StringComparison.OrdinalIgnoreCase);
-
-            var scopeStart = blockStart >= 0 ? blockStart : Math.Max(0, imageIndex - 4000);
-            var scopeLength = blockEnd > scopeStart
-                ? blockEnd + "</ignore_js_op>".Length - scopeStart
-                : Math.Min(htmlContent.Length - scopeStart, imageLength + 8000);
-            var scope = htmlContent.Substring(scopeStart, scopeLength);
-
-            var linkMatches = Regex.Matches(
-                scope,
-                @"<a\b[^>]*\bhref\s*=\s*[\""']([^\""']*(?:mod=attachment|action=attachpay)[^\""']*)[\""'][^>]*>",
-                RegexOptions.IgnoreCase | RegexOptions.Singleline);
-
-            foreach (Match linkMatch in linkMatches)
-            {
-                var downloadUrl = HtmlDecode(linkMatch.Groups[1].Value.Trim());
-                var aidMatch = Regex.Match(downloadUrl, @"(?:[?&])aid=([^&\""'<>\s]+)", RegexOptions.IgnoreCase);
-                if (aidMatch.Success)
-                {
-                    var attachmentId = aidMatch.Groups[1].Value;
-                    Debug.WriteLine($"🆔 图片预览关联附件 ID: {attachmentId}");
-                    return attachmentId;
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            Debug.WriteLine($"⚠️ 提取图片预览附件 ID 失败: {ex.Message}");
-        }
-
-        return null;
     }
 
     /// <summary>
@@ -2452,17 +1984,6 @@ public partial class XmlParsingService
         return null;
     }
 
-    private static bool IsImageAttachmentFile(string? fileName)
-    {
-        if (string.IsNullOrWhiteSpace(fileName))
-        {
-            return false;
-        }
-
-        var extension = Path.GetExtension(fileName).ToLowerInvariant();
-        return extension is ".jpg" or ".jpeg" or ".png" or ".gif" or ".bmp" or ".webp" or ".avif";
-    }
-
     /// <summary>
     ///  新增：提取楼主发布的内容范围（不包括跟帖/回复）
     /// 楼主的内容在第一个 &lt;div id="post_*"&gt; 到下一个 &lt;div id="post_*"&gt; 之间
@@ -2707,16 +2228,6 @@ public partial class XmlParsingService
                     var attachment = CreatePattlAttachmentElement(downloadUrl, attachmentId, fileName, ddContent);
                     if (attachment != null)
                     {
-                        var previewElement = CreateAttachmentPreviewElement(downloadUrl, fileName, ddContent);
-                        if (previewElement != null)
-                        {
-                            //添加更多参数
-                            previewElement.AttachmentId = attachment.AttachmentId; 
-                            previewElement.DownloadCount = attachment.DownloadCount;
-
-                            attachments.Add(previewElement);
-                        }
-
                         attachments.Add(attachment);
                     }
                 }
@@ -2785,15 +2296,13 @@ public partial class XmlParsingService
             var sizeMatch = Regex.Match(ddContent, @"<p[^>]*>\s*([^<,]+?)\s*,\s*下载次数:\s*(\d+)", RegexOptions.IgnoreCase);
 
             var fileSize = "";
-            var downloadCountStr = "";
-            int downloadCount = 0;
+            var downloadCount = "";
 
             if (sizeMatch.Success)
             {
                 fileSize = sizeMatch.Groups[1].Value.Trim();  // e.g., "1.12 KB"
-                downloadCountStr = sizeMatch.Groups[2].Value.Trim();  // e.g., "1"
-                int.TryParse(downloadCountStr, out downloadCount);
-                Debug.WriteLine($" pattl 附件: 文件={fileName}, 大小={fileSize}, 下载={downloadCountStr}次");
+                downloadCount = sizeMatch.Groups[2].Value.Trim();  // e.g., "1"
+                Debug.WriteLine($" pattl 附件: 文件={fileName}, 大小={fileSize}, 下载={downloadCount}次");
             }
             else
             {
@@ -2803,17 +2312,16 @@ public partial class XmlParsingService
                 if (fallbackMatch.Success)
                 {
                     fileSize = fallbackMatch.Groups[1].Value.Trim();
-                    downloadCountStr = fallbackMatch.Groups[2].Value.Trim();
-                    int.TryParse(downloadCountStr, out downloadCount);
-                    Debug.WriteLine($" 从备选位置提取: 大小={fileSize}, 下载={downloadCountStr}次");
+                    downloadCount = fallbackMatch.Groups[2].Value.Trim();
+                    Debug.WriteLine($" 从备选位置提取: 大小={fileSize}, 下载={downloadCount}次");
                 }
             }
 
             // 构建文件大小显示
             string fileSizeDisplay = fileSize;
-            if (!string.IsNullOrEmpty(downloadCountStr))
+            if (!string.IsNullOrEmpty(downloadCount))
             {
-                fileSizeDisplay = $"{fileSize} ({downloadCountStr}次)";
+                fileSizeDisplay = $"{fileSize} ({downloadCount}次)";
             }
 
             //  步骤 3：提取上传时间
@@ -2877,7 +2385,6 @@ public partial class XmlParsingService
                 FileName = fileName,
                 FileSize = fileSizeDisplay,
                 UploadTime = uploadTime,
-                DownloadCount=downloadCount,
                 AttachmentId = attachmentId,
                 SalePrice = salePrice  //  null = 可下载，> 0 = 需要购买
             };
@@ -2889,34 +2396,6 @@ public partial class XmlParsingService
         }
     }
 
-    private static ContentElement? CreateAttachmentPreviewElement(string downloadUrl, string fileName, string ddContent)
-    {
-        if (!IsImageAttachmentFile(fileName) ||
-            !Uri.TryCreate(downloadUrl, UriKind.Absolute, out var attachmentUri) ||
-            (attachmentUri.Scheme != Uri.UriSchemeHttp && attachmentUri.Scheme != Uri.UriSchemeHttps))
-        {
-            return null;
-        }
-
-        var widthMatch = Regex.Match(ddContent, @"\bwidth\s*=\s*[""']?(\d+)", RegexOptions.IgnoreCase);
-        var heightMatch = Regex.Match(ddContent, @"\bheight\s*=\s*[""']?(\d+)", RegexOptions.IgnoreCase);
-
-        int.TryParse(widthMatch.Success ? widthMatch.Groups[1].Value : null, out var width);
-        int.TryParse(heightMatch.Success ? heightMatch.Groups[1].Value : null, out var height);
-
-        Debug.WriteLine($"🖼️ 创建图片附件预览元素: 文件={fileName}, URL={downloadUrl}");
-
-        return new ContentElement
-        {
-            Type = ContentElementType.Image,
-            Url = downloadUrl,
-            FileName = fileName,
-            Title = fileName,
-            ImageWidth = width,
-            ImageHeight = height
-        };
-    }
-
     /// <summary>
     /// 解析图片标签
     /// </summary>
@@ -2924,7 +2403,7 @@ public partial class XmlParsingService
     {
         try
         {
-            var srcMatch = Regex.Match(imgTag, @"(?:file|zoomfile)\s*=\s*""([^"" ]+)""", RegexOptions.IgnoreCase);
+            var srcMatch = Regex.Match(imgTag, @"file=""([^""]+)""", RegexOptions.IgnoreCase);
             var widthMatch = Regex.Match(imgTag, @"width[^=]*=""?([^""\s]+)", RegexOptions.IgnoreCase);
             var heightMatch = Regex.Match(imgTag, @"height[^=]*=""?([^""\s]+)", RegexOptions.IgnoreCase);
             var altMatch = Regex.Match(imgTag, @"alt=""([^""]*)""", RegexOptions.IgnoreCase);
@@ -2965,12 +2444,6 @@ public partial class XmlParsingService
                 }
             }
 
-            string attachmentId = "";
-            var aidMatch = Regex.Match(imgTag, @"aid=""(.*?)""", RegexOptions.IgnoreCase);
-            if (aidMatch.Success)
-            {
-                attachmentId = aidMatch.Groups[1].Value;
-            }
             // 如果仍然没有获取到有效的 URL，返回 null
             if (string.IsNullOrWhiteSpace(imageUrl))
             {
@@ -2986,7 +2459,6 @@ public partial class XmlParsingService
                 Type = ContentElementType.Image,
                 Url = imageUrl,
                 Title = altMatch.Success ? altMatch.Groups[1].Value : "",
-                AttachmentId= attachmentId,
                 ImageWidth = width,
                 ImageHeight = height
             };
@@ -4402,7 +3874,7 @@ public partial class XmlParsingService
     /// 2. 需要登录：包含 "登录" 的提示
     /// 3. 其他系统提示：通用的提示信息
     /// </summary>
-    public string ExtractErrorMessageFromResponse(string xmlResponse)
+    private string? ExtractErrorMessageFromResponse(string xmlResponse)
     {
         try
         {

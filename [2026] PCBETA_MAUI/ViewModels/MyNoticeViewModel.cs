@@ -73,6 +73,11 @@ public partial class MyNoticeViewModel : ObservableObject
             // 使用XmlParsingService解析通知
             var noticeList = _xmlParsingService.ParseNotices(html);
 
+            await Task.WhenAll(noticeList.Select(async notice =>
+            {
+                notice.AvatarSource = await ImageDataLoader.LoadAsync(notice.AvatarUrl);
+            }));
+
             // 清空之前的通知并添加新的
             Notices.Clear();
             foreach (var notice in noticeList)

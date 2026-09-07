@@ -9,15 +9,15 @@
         <vm:LoginViewModel/>
     </ContentPage.BindingContext>    
     <ScrollView>
-        <VerticalStackLayout Padding="20" Spacing="20">
+        <VerticalStackLayout Padding="28,48" Spacing="22" BackgroundColor="{AppThemeBinding Light=#F6F8FC, Dark=#151A24}">
 
-            <Image Source="pcbeta_logo.png" HeightRequest="60"/>
+            <Image Source="pcbeta_logo.png" HeightRequest="72" Margin="0,8,0,4"/>
             <!-- Logo -->
             <Label Text="欢迎您，请登录"
                    FontSize="28"
                    FontAttributes="Bold"
                    HorizontalTextAlignment="Center"
-                   TextColor="#1985DB"/>
+                   TextColor="{AppThemeBinding Light=#1D4ED8, Dark=#60A5FA}"/>
 
             <!-- 错误消息 -->
             <Label Text="{Binding ErrorMessage}"
@@ -28,9 +28,10 @@
             <!-- 用户名 -->
             <VerticalStackLayout Spacing="5">
                 <Label Text="用户名" FontAttributes="Bold"/>
-                <Entry Text="{Binding Username}"
+                    <Entry Text="{Binding Username}"
                        Placeholder="请输入用户名"
-                       FontSize="14"/>
+                       FontSize="14"
+                       BackgroundColor="{AppThemeBinding Light=White, Dark=#202938}"/>
             </VerticalStackLayout>
 
             <!-- 密码 -->
@@ -39,7 +40,8 @@
                 <Entry Text="{Binding Password}"
                        Placeholder="请输入密码"
                        IsPassword="True"
-                       FontSize="14"/>
+                       FontSize="14"
+                       BackgroundColor="{AppThemeBinding Light=White, Dark=#202938}"/>
             </VerticalStackLayout>
 
             <!-- 安全提问 -->
@@ -47,7 +49,8 @@
                 <Label Text="安全提问(若未设置请忽略)" FontAttributes="Bold"/>
                 <Picker x:Name="QuestionPicker"
                         SelectedIndex="{Binding QuestionPickerIndex}"
-                        FontSize="14">
+                        FontSize="14"
+                        BackgroundColor="{AppThemeBinding Light=White, Dark=#202938}">
                 </Picker>
             </VerticalStackLayout>
 
@@ -57,7 +60,8 @@
                 <Label Text="答案" FontAttributes="Bold"/>
                 <Entry Text="{Binding SecurityAnswer}"
                        Placeholder="请输入答案"
-                       FontSize="14"/>
+                        FontSize="14"
+                        BackgroundColor="{AppThemeBinding Light=White, Dark=#202938}"/>
             </VerticalStackLayout>
 
             <!-- 记住密码 -->
@@ -70,7 +74,7 @@
             <!-- 登录按钮 -->
             <Button Text="登录"
                     Command="{Binding LoginCommand}"
-                    BackgroundColor="#1985DB"
+                    BackgroundColor="{AppThemeBinding Light=#2563EB, Dark=#3B82F6}"
                     TextColor="White"
                     FontAttributes="Bold"
                     Padding="0,15"
@@ -83,7 +87,7 @@
 
             <!-- 快速导航按钮 -->
             <Button Text="跳过登录，浏览论坛"
-                    Command="{Binding GuestAccessAsyncCommand}"
+                    Command="{Binding GuestAccessCommand}"
                     BackgroundColor="Transparent"
                     TextColor="#1985DB"
                     FontAttributes="Bold"

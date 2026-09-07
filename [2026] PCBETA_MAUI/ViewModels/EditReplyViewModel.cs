@@ -28,6 +28,8 @@ public class EditReplyViewModel : INotifyPropertyChanged
     private string _threadTitle = string.Empty;
     private string _threadInfo = string.Empty;
     private string _formhash = string.Empty;  // ✅ 新增：表单哈希
+    private string _uid = string.Empty;
+    private string _hash = string.Empty;
     private string _posttime = string.Empty;  // ✅ 新增：发帖时间戳
     private bool _isLoading = true;
 
@@ -171,6 +173,8 @@ public class EditReplyViewModel : INotifyPropertyChanged
 
             // 从HTML中提取关键数据
             _formhash = ExtractFormHashFromHtml(pageHtml);
+            _uid = ExtractUidFromHtml(pageHtml);
+            _hash = ExtractHashFromHtml(pageHtml);
             _posttime = ExtractPostTimeFromHtml(pageHtml);
             var originalContent = ExtractMessageFromHtml(pageHtml);
             var subject = ExtractSubjectFromHtml(pageHtml);
@@ -449,10 +453,10 @@ public class EditReplyViewModel : INotifyPropertyChanged
             UploadedImages.Add(fileInfo);
 
             // 获取认证参数
-            var (formhash, uid, hash) = await GetAuthenticationParamsAsync();
+            //var (formhash, uid, hash) = await GetAuthenticationParamsAsync();
 
             // 上传文件
-            var uploadResult = await UploadFileAsync(fileResult.FullPath, isImage: true, uid, hash);
+            var uploadResult = await UploadFileAsync(fileResult.FullPath, isImage: true, _uid, _hash);
 
             if (uploadResult != null)
             {
@@ -528,10 +532,10 @@ public class EditReplyViewModel : INotifyPropertyChanged
             UploadedAttachments.Add(fileInfo);
 
             // 获取认证参数
-            var (formhash, uid, hash) = await GetAuthenticationParamsAsync();
+            //var (formhash, uid, hash) = await GetAuthenticationParamsAsync();
 
             // 上传文件
-            var uploadResult = await UploadFileAsync(fileResult.FullPath, isImage: false, uid, hash);
+            var uploadResult = await UploadFileAsync(fileResult.FullPath, isImage: false, _uid, _hash);
 
             if (uploadResult != null)
             {
@@ -765,8 +769,8 @@ public class EditReplyViewModel : INotifyPropertyChanged
     {
         try
         {
-            var (formhash, _, _) = await GetAuthenticationParamsAsync();
-            var deleteUrl = $"https://bbs.pcbeta.com/forum.php?mod=ajax&action=deleteattach&inajax=yes&aids[]={attachmentId}&tid={_threadId}&pid={_postId}&formhash={formhash}";
+            //var (formhash, _, _) = await GetAuthenticationParamsAsync();
+            var deleteUrl = $"https://bbs.pcbeta.com/forum.php?mod=ajax&action=deleteattach&inajax=yes&aids[]={attachmentId}&tid={_threadId}&pid={_postId}&formhash={_formhash}";
             await _apiService.DeleteAttachmentAsync(deleteUrl);
             Debug.WriteLine($"✅ 服务器删除附件: aid={attachmentId}");
         }
@@ -877,23 +881,25 @@ public class EditReplyViewModel : INotifyPropertyChanged
                     await Shell.Current.GoToAsync("..");
                     Debug.WriteLine($"✅ 返回上一页");
 
-                    // 等待页面初始化
-                    await Task.Delay(1000);
+                    /*
+                                         // 等待页面初始化
+                                        await Task.Delay(1000);
 
-                    // 尝试刷新ThreadContentPage
-                    if (Shell.Current.Navigation?.NavigationStack.Count > 0)
-                    {
-                        var lastPage = Shell.Current.Navigation.NavigationStack.LastOrDefault();
-                        if (lastPage is ThreadContentPage tcPage)
-                        {
-                            if (tcPage.BindingContext is ThreadContentViewModel tvm)
-                            {
-                                Debug.WriteLine($"🔄 调用刷新");
-                                await tvm.LoadThreadContentAsync();
-                                Debug.WriteLine($"✅ 刷新完成");
-                            }
-                        }
-                    }
+                                        // 尝试刷新ThreadContentPage
+                                        if (Shell.Current.Navigation?.NavigationStack.Count > 0)
+                                        {
+                                            var lastPage = Shell.Current.Navigation.NavigationStack.LastOrDefault();
+                                            if (lastPage is ThreadContentPage tcPage)
+                                            {
+                                                if (tcPage.BindingContext is ThreadContentViewModel tvm)
+                                                {
+                                                    Debug.WriteLine($"🔄 调用刷新");
+                                                    await tvm.LoadThreadContentAsync();
+                                                    Debug.WriteLine($"✅ 刷新完成");
+                                                }
+                                            }
+                                        }
+                     */
                 }
                 catch (Exception navEx)
                 {

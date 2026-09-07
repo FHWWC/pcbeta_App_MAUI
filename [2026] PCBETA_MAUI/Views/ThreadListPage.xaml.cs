@@ -8,6 +8,11 @@ namespace PCBetaMAUI.Views;
 [QueryProperty(nameof(PageNum), "page")]
 public partial class ThreadListPage : ContentPage
 {
+    private static readonly Color LightThreadBackgroundColor = Color.FromArgb("#FFFFFF");
+    private static readonly Color DarkThreadBackgroundColor = Color.FromArgb("#202938");
+    private static readonly Color ThreadHoverBackgroundColor = Color.FromArgb("#E8F3FF");
+    private const string ThreadHoverAnimationName = "ThreadHoverBackground";
+
     private string? _boardId;
     private string? _forumName;
     private int _pageNum = 1;
@@ -48,6 +53,62 @@ public partial class ThreadListPage : ContentPage
     public ThreadListPage()
     {
         InitializeComponent();
+    }
+
+    private async void OnThreadPointerEntered(object sender, PointerEventArgs e)
+    {
+        if (GetThreadFrame(sender) is Frame frame)
+        {
+            await AnimateThreadBackgroundAsync(frame, ThreadHoverBackgroundColor);
+        }
+    }
+
+    private async void OnThreadPointerExited(object sender, PointerEventArgs e)
+    {
+        if (GetThreadFrame(sender) is Frame frame)
+        {
+            var originalColor = Application.Current?.RequestedTheme == AppTheme.Dark
+                ? DarkThreadBackgroundColor
+                : LightThreadBackgroundColor;
+
+            await AnimateThreadBackgroundAsync(frame, originalColor);
+        }
+    }
+
+    private static Frame? GetThreadFrame(object sender)
+    {
+        return sender switch
+        {
+            Frame frame => frame,
+            PointerGestureRecognizer recognizer => recognizer.Parent as Frame,
+            _ => null
+        };
+    }
+
+    private static Task AnimateThreadBackgroundAsync(Frame frame, Color targetColor)
+    {
+        frame.AbortAnimation(ThreadHoverAnimationName);
+
+        var startColor = frame.BackgroundColor;
+        var completion = new TaskCompletionSource<bool>();
+        var animation = new Animation(progress =>
+        {
+            frame.BackgroundColor = Color.FromRgba(
+                startColor.Red + (targetColor.Red - startColor.Red) * progress,
+                startColor.Green + (targetColor.Green - startColor.Green) * progress,
+                startColor.Blue + (targetColor.Blue - startColor.Blue) * progress,
+                startColor.Alpha + (targetColor.Alpha - startColor.Alpha) * progress);
+        });
+
+        frame.Animate(
+            ThreadHoverAnimationName,
+            animation,
+            16,
+            180,
+            Easing.CubicOut,
+            (_, _) => completion.TrySetResult(true));
+
+        return completion.Task;
     }
 
     protected override async void OnAppearing()

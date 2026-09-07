@@ -18,6 +18,7 @@ namespace PCBetaMAUI.ViewModels;
 public class ReplyThreadViewModel : INotifyPropertyChanged
 {
     private readonly ApiService _apiService;
+    private readonly PasswordSecurityService _passwordService;
     private string _forumId;  // fid
     private string _threadId; // tid
     private string _repquote = string.Empty;  // ✅ 新增：评论回复ID
@@ -29,6 +30,10 @@ public class ReplyThreadViewModel : INotifyPropertyChanged
     private bool _isSubmitEnabled;
     private string _threadTitle = string.Empty;
     private string _threadInfo = string.Empty;
+    private bool _isSubmitting = false;  // ✅ 新增：提交状态标志
+    private string _formhash = string.Empty;
+    private string _uid = string.Empty;
+    private string _hash = string.Empty;
 
     public ObservableCollection<UploadedFileInfo> UploadedImages { get; }
     public ObservableCollection<UploadedFileInfo> UploadedAttachments { get; }
@@ -43,6 +48,9 @@ public class ReplyThreadViewModel : INotifyPropertyChanged
             {
                 CharacterCount = value?.Length ?? 0;
                 UpdateSubmitButtonState();
+                // ✅ 改进：当内容变化时，通知 SubmitReplyCommand 重新检查 canExecute 条件
+                SubmitReplyCommand?.NotifyCanExecuteChanged();
+                Debug.WriteLine($"📝 ReplyContent 已更新: 长度={value?.Length ?? 0}, IsSubmitEnabled={IsSubmitEnabled}");
             }
         }
     }
@@ -56,7 +64,15 @@ public class ReplyThreadViewModel : INotifyPropertyChanged
     public bool IsSubmitEnabled
     {
         get => _isSubmitEnabled;
-        set => SetProperty(ref _isSubmitEnabled, value);
+        set
+        {
+            if (SetProperty(ref _isSubmitEnabled, value))
+            {
+                // ✅ 改进：当 IsSubmitEnabled 变化时，通知 SubmitReplyCommand 重新评估 CanExecute
+                SubmitReplyCommand?.NotifyCanExecuteChanged();
+                Debug.WriteLine($"🔔 IsSubmitEnabled 已变化: {value}，已通知 SubmitReplyCommand 重新计算 CanExecute");
+            }
+        }
     }
 
     public string ThreadTitle
@@ -87,6 +103,13 @@ public class ReplyThreadViewModel : INotifyPropertyChanged
         set => SetProperty(ref _replyToCommentId, value);
     }
 
+    // ✅ 新增：提交状态属性 - 用于 UI 禁用按钮
+    public bool IsSubmitting
+    {
+        get => _isSubmitting;
+        set => SetProperty(ref _isSubmitting, value);
+    }
+
     // 命令
     public IAsyncRelayCommand PickImageCommand { get; }
     public IAsyncRelayCommand PickAttachmentCommand { get; }
@@ -107,6 +130,7 @@ public class ReplyThreadViewModel : INotifyPropertyChanged
     public ReplyThreadViewModel(ApiService apiService, string forumId, string threadId)
     {
         _apiService = apiService;
+        _passwordService = new PasswordSecurityService();
         _forumId = forumId;
         _threadId = threadId;
 
@@ -120,10 +144,84 @@ public class ReplyThreadViewModel : INotifyPropertyChanged
         DeleteAttachmentCommand = new AsyncRelayCommand<UploadedFileInfo>(OnDeleteAttachmentAsync);
         InsertImageCommand = new AsyncRelayCommand<UploadedFileInfo>(OnInsertImageAsync);
         InsertAttachmentCommand = new AsyncRelayCommand<UploadedFileInfo>(OnInsertAttachmentAsync);
-        SubmitReplyCommand = new AsyncRelayCommand(OnSubmitReplyAsync);
+
+        // ✅ 改进：为 SubmitReplyCommand 添加 canExecute 委托
+        // 直接检查 ReplyContent 属性而不是私有字段，确保获取最新值
+        // 这样可以避免字段和属性之间的同步问题
+        SubmitReplyCommand = new AsyncRelayCommand(
+            OnSubmitReplyAsync,
+            () => _isSubmitEnabled && !string.IsNullOrWhiteSpace(ReplyContent) && ReplyContent.Length >= 8);
+
         CancelCommand = new AsyncRelayCommand(OnCancelAsync);
 
         UpdateSubmitButtonState();
+    }
+
+    private async Task ReauthenticateAfterReplyAsync()
+    {
+        try
+        {
+            var username = await _passwordService.GetLastUsernameAsync();
+            if (string.IsNullOrWhiteSpace(username))
+            {
+                Debug.WriteLine("⚠️ 回帖后重认证跳过：没有保存的用户名");
+                return;
+            }
+
+            var password = await _passwordService.GetPasswordAsync(username);
+            if (string.IsNullOrEmpty(password))
+            {
+                Debug.WriteLine("⚠️ 回帖后重认证跳过：没有保存的密码，保留当前会话");
+                return;
+            }
+
+            var questionId = await _passwordService.GetSecurityQuestionIdAsync(username);
+            var answer = await _passwordService.GetSecurityAnswerAsync(username);
+
+            Debug.WriteLine("🔄 回帖提交成功，开始重新认证会话");
+
+            // 优先使用论坛页面返回的完整退出 URL（通常包含 formhash）。
+            // 该 URL 必须通过共享 HttpClient 调用，才能操作当前应用会话。
+            var logoutUrl = UserCredentialsService.Instance.LogoutUrl;
+            if (!string.IsNullOrWhiteSpace(logoutUrl))
+            {
+                if (!Uri.TryCreate(logoutUrl, UriKind.Absolute, out var logoutUri))
+                {
+                    logoutUri = new Uri($"{ApiService.BaseUrl}/{logoutUrl.TrimStart('/')}");
+                }
+
+                using var logoutResponse = await HttpClientManager.Instance.GetAsync(logoutUri.ToString());
+                Debug.WriteLine($"✅ 回帖后退出接口调用完成: {(int)logoutResponse.StatusCode}");
+            }
+            else
+            {
+                await _apiService.LogoutAsync();
+                Debug.WriteLine("✅ 回帖后调用备用退出接口完成");
+            }
+
+            // 与手动退出流程保持一致，清除失效的认证 Cookie 和访问校验状态。
+            HttpClientManager.ResetHttpClient();
+            Debug.WriteLine("✅ 回帖后已重置共享 HttpClient，准备重新登录");
+
+            var (loginSuccess, errorMessage) = await _apiService.LoginAsync(
+                username,
+                password,
+                questionId,
+                answer);
+
+            if (loginSuccess)
+            {
+                Debug.WriteLine("✅ 回帖后重新登录成功");
+            }
+            else
+            {
+                Debug.WriteLine($"❌ 回帖后重新登录失败: {errorMessage ?? "未知错误"}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"❌ 回帖后重认证异常: {ex.Message}");
+        }
     }
 
     /// <summary>
@@ -195,7 +293,7 @@ public class ReplyThreadViewModel : INotifyPropertyChanged
                 Debug.WriteLine($"📄 开始初始化回帖页面（帖子回复模式）: fid={forumId}, tid={threadId}");
             }
 
-            // 获取回帖编辑页面的 HTML（这会建立 session）
+            // 获取回帖页面的 HTML（这会建立 session）
             // ✅ 改进：传递 repquote 参数到 API 方法
             var pageHtml = await _apiService.GetReplyEditPageHtmlAsync(forumId, threadId, repquote);
 
@@ -204,6 +302,10 @@ public class ReplyThreadViewModel : INotifyPropertyChanged
                 Debug.WriteLine("⚠️ 回帖页面 HTML 为空");
                 return;
             }
+
+            _formhash = ExtractFormHashFromHtml(pageHtml);
+            _uid = ExtractUidFromHtml(pageHtml);
+            _hash = ExtractHashFromHtml(pageHtml);
 
             Debug.WriteLine($"✅ 回帖页面初始化完成，页面大小: {pageHtml.Length} 字节");
             Debug.WriteLine($"   - 这确保了后续的附件上传和回帖提交能被正确关联");
@@ -258,10 +360,10 @@ public class ReplyThreadViewModel : INotifyPropertyChanged
             UploadedImages.Add(fileInfo);
 
             // 获取认证参数
-            var (formhash, uid, hash) = await GetAuthenticationParamsAsync();
+            //var (formhash, uid, hash) = await GetAuthenticationParamsAsync();
 
             // 上传文件
-            var uploadResult = await UploadFileAsync(fileResult.FullPath, isImage: true, uid, hash);
+            var uploadResult = await UploadFileAsync(fileResult.FullPath, isImage: true, _uid, _hash);
 
             if (uploadResult != null)
             {
@@ -386,10 +488,10 @@ public class ReplyThreadViewModel : INotifyPropertyChanged
             UploadedAttachments.Add(fileInfo);
 
             // 获取认证参数
-            var (formhash, uid, hash) = await GetAuthenticationParamsAsync();
+            //var (formhash, uid, hash) = await GetAuthenticationParamsAsync();
 
             // 上传文件
-            var uploadResult = await UploadFileAsync(fileResult.FullPath, isImage: false, uid, hash);
+            var uploadResult = await UploadFileAsync(fileResult.FullPath, isImage: false, _uid, _hash);
 
             if (uploadResult != null)
             {
@@ -647,9 +749,9 @@ public class ReplyThreadViewModel : INotifyPropertyChanged
         try
         {
             // 动态获取 formhash
-            var (formhash, _, _) = await GetAuthenticationParamsAsync();
+            //var (formhash, _, _) = await GetAuthenticationParamsAsync();
 
-            var deleteUrl = $"https://bbs.pcbeta.com/forum.php?mod=ajax&action=deleteattach&inajax=yes&aids[]={attachmentId}&tid={_threadId}&pid=&formhash={formhash}";
+            var deleteUrl = $"https://bbs.pcbeta.com/forum.php?mod=ajax&action=deleteattach&inajax=yes&aids[]={attachmentId}&tid={_threadId}&pid=&formhash={_formhash}";
 
             await _apiService.DeleteAttachmentAsync(deleteUrl);
             Debug.WriteLine($"✅ 服务器删除附件: aid={attachmentId}");
@@ -980,6 +1082,8 @@ public class ReplyThreadViewModel : INotifyPropertyChanged
     private async Task OnSubmitReplyAsync()
     {
         Debug.WriteLine($"🚀 OnSubmitReplyAsync 被调用");
+        //CookieDiagnostics.TakeSnapshot("回帖提交前");
+        IsSubmitting = true;  // ✅ 新增：标记提交状态
         try
         {
             if (!ValidateReply())
@@ -989,9 +1093,9 @@ public class ReplyThreadViewModel : INotifyPropertyChanged
             }
 
             // 获取认证参数
-            var (formhash, uid, hash) = await GetAuthenticationParamsAsync();
+            //var (formhash, uid, hash) = await GetAuthenticationParamsAsync();
 
-            if (string.IsNullOrEmpty(formhash))
+            if (string.IsNullOrEmpty(_formhash))
             {
                 await ShowErrorAlert("错误", "无法获取必要的认证参数，请重试");
                 return;
@@ -1021,7 +1125,7 @@ public class ReplyThreadViewModel : INotifyPropertyChanged
                         _forumId,
                         _threadId, 
                         _replyContent, 
-                        formhash,
+                        _formhash,
                         noticeStr,
                         noticeAuthorMsg,
                         ReplyToCommentId,
@@ -1052,7 +1156,7 @@ public class ReplyThreadViewModel : INotifyPropertyChanged
                         _forumId,
                         _threadId, 
                         _replyContent, 
-                        formhash,
+                        _formhash,
                         noticeTrimstr,  // 使用提取的格式化引用内容
                         noticeAuthorMsg,  // 使用提取的纯文本内容
                         ReplyToCommentId,
@@ -1066,93 +1170,30 @@ public class ReplyThreadViewModel : INotifyPropertyChanged
 
                 // ✅ 新增：构建附件元数据列表
                 var attachmentMetadataList = BuildAttachmentMetadataList();
-                result = await _apiService.SubmitReplyLZAsync(_forumId, _threadId, _replyContent, formhash, attachmentMetadataList);
+                result = await _apiService.SubmitReplyLZAsync(_forumId, _threadId, _replyContent, _formhash, attachmentMetadataList);
             }
 
             if (result.IsSuccess)
             {
                 Debug.WriteLine($"✅ 回帖提交成功");
                 await ShowSuccessAlert("发送成功", "回帖已发送");
+                await ReauthenticateAfterReplyAsync();
                 Debug.WriteLine($"📝 即将返回上一页并刷新");
+
+                //CookieDiagnostics.TakeSnapshot("回帖提交后");
+                //CookieDiagnostics.PrintAllSnapshots();  // 打印诊断信息
 
                 // 使用 Shell 导航返回上一页
                 try
                 {
+                    // ✅ 改进：只返回上一页，让 ThreadContentPage.OnAppearing 自动处理刷新
+                    // 这避免了两次 LoadThreadContentAsync 调用导致的会话状态不一致问题
                     await Shell.Current.GoToAsync("..");
-                    Debug.WriteLine($"✅ Shell GoToAsync('..')完成");
-
-                    // 等待导航完成和页面初始化
-                    await Task.Delay(1000);
-
-                    // 尝试从多个位置获取当前页面
-                    ThreadContentPage? threadContentPage = null;
-                    ThreadContentViewModel? tvm = null;
-
-                    // 方式1: 从 Shell.CurrentPage 获取
-                    if (Shell.Current.CurrentPage is ThreadContentPage tcPage1)
-                    {
-                        threadContentPage = tcPage1;
-                        Debug.WriteLine($"✅ 方式1: 从 Shell.Current.CurrentPage 获取到 ThreadContentPage");
-                    }
-
-                    // 方式2: 从导航栈获取
-                    if (threadContentPage == null && Shell.Current.Navigation?.NavigationStack.Count > 0)
-                    {
-                        var lastPage = Shell.Current.Navigation.NavigationStack.LastOrDefault();
-                        if (lastPage is ThreadContentPage tcPage2)
-                        {
-                            threadContentPage = tcPage2;
-                            Debug.WriteLine($"✅ 方式2: 从导航栈获取到 ThreadContentPage");
-                        }
-                        else
-                        {
-                            Debug.WriteLine($"📄 导航栈最后一页: {lastPage?.GetType().Name}");
-                        }
-                    }
-
-                    // 获取 ViewModel
-                    if (threadContentPage != null)
-                    {
-                        if (threadContentPage.BindingContext is ThreadContentViewModel tvm_temp)
-                        {
-                            tvm = tvm_temp;
-                            Debug.WriteLine($"✅ 获取到 ThreadContentViewModel");
-                        }
-                        else
-                        {
-                            Debug.WriteLine($"❌ ThreadContentPage.BindingContext 类型: {threadContentPage.BindingContext?.GetType().Name}");
-                        }
-                    }
-
-                    // 执行刷新
-                    if (tvm != null)
-                    {
-                        try
-                        {
-                            Debug.WriteLine($"🔄 调用 LoadThreadContentAsync 刷新页面");
-                            Debug.WriteLine($"   - 线程ID: {tvm.ThreadId}");
-                            Debug.WriteLine($"   - IsLoading 刷新前: {tvm.IsLoading}");
-
-                            await tvm.LoadThreadContentAsync();
-
-                            Debug.WriteLine($"✅ 刷新完成");
-                            Debug.WriteLine($"   - HasContent: {tvm.HasContent}");
-                            Debug.WriteLine($"   - HasReplies: {tvm.HasReplies}");
-                            Debug.WriteLine($"   - ReplyList.Count: {tvm.ReplyList.Count}");
-                        }
-                        catch (Exception refreshEx)
-                        {
-                            Debug.WriteLine($"❌ 刷新异常: {refreshEx.Message}");
-                        }
-                    }
-                    else
-                    {
-                        Debug.WriteLine($"❌ 无法获取 ThreadContentViewModel 进行刷新");
-                    }
+                    Debug.WriteLine($"✅ Shell GoToAsync('..')完成，ThreadContentPage.OnAppearing 将自动触发刷新");
                 }
                 catch (Exception navEx)
                 {
-                    Debug.WriteLine($"❌ 导航和刷新错误: {navEx.Message}\n{navEx.StackTrace}");
+                    Debug.WriteLine($"❌ 导航错误: {navEx.Message}\n{navEx.StackTrace}");
                 }
             }
             else
@@ -1164,6 +1205,11 @@ public class ReplyThreadViewModel : INotifyPropertyChanged
         {
             Debug.WriteLine($"❌ 提交回帖错误: {ex.Message}\n{ex.StackTrace}");
             await ShowErrorAlert("提交错误", ex.Message);
+        }
+        finally
+        {
+            IsSubmitting = false;  // ✅ 新增：重置提交状态
+            Debug.WriteLine($"✅ IsSubmitting 已重置为 false");
         }
     }
 
@@ -1287,7 +1333,18 @@ public class ReplyThreadViewModel : INotifyPropertyChanged
     /// </summary>
     private void UpdateSubmitButtonState()
     {
-        IsSubmitEnabled = !string.IsNullOrWhiteSpace(_replyContent) && _replyContent.Length >= 8;
+        var isEmpty = string.IsNullOrWhiteSpace(_replyContent);
+        var isTooShort = (_replyContent?.Length ?? 0) < 8;
+        var newState = !isEmpty && !isTooShort;
+
+        if (IsSubmitEnabled != newState)
+        {
+            IsSubmitEnabled = newState;
+            Debug.WriteLine($"🔘 提交按钮状态更新: {newState}");
+            Debug.WriteLine($"   - 内容为空: {isEmpty}");
+            Debug.WriteLine($"   - 内容过短 (<8字): {isTooShort}");
+            Debug.WriteLine($"   - 当前长度: {_replyContent?.Length ?? 0}");
+        }
     }
 
     /// <summary>

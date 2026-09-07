@@ -13,12 +13,16 @@
     <ContentPage.Resources>
         <ResourceDictionary>
             <Style x:Key="BottomNaviButtonStyle" TargetType="Button">
-                <Setter Property="BackgroundColor" Value="DodgerBlue"/>
-                <Setter Property="TextColor" Value="White"/>
-                <Setter Property="CornerRadius" Value="0"/>
+                <Setter Property="BackgroundColor" Value="Transparent"/>
+                <Setter Property="TextColor" Value="{AppThemeBinding Light=Black, Dark=White}"/>
+                <Setter Property="CornerRadius" Value="50"/>
+                <Setter Property="BorderWidth" Value="2"/>
+                <Setter Property="BorderColor" Value="LightBlue"/>
                 <Setter Property="Padding" Value="0"/>
-                <Setter Property="HeightRequest" Value="40"/>
-                <Setter Property="VisualStateManager.VisualStateGroups">
+                <Setter Property="HeightRequest" Value="50"/>
+                <Setter Property="WidthRequest" Value="50"/>
+                <!--
+                                <Setter Property="VisualStateManager.VisualStateGroups">
                     <VisualStateGroupList>
                         <VisualStateGroup Name="CommonStates">
                             <VisualState Name="Normal">
@@ -39,13 +43,14 @@
                         </VisualStateGroup>
                     </VisualStateGroupList>
                 </Setter>
+                -->
             </Style>
         </ResourceDictionary>
     </ContentPage.Resources>
-    
-    <Grid RowDefinitions="50,*,Auto" Padding="0">
+
+    <Grid RowDefinitions="64,*,80" Padding="0" BackgroundColor="{AppThemeBinding Light=#F6F8FC, Dark=#151A24}">
         <!-- Header -->
-        <Grid ColumnDefinitions="50,*,50" Padding="15,0" BackgroundColor="#F5F5F5">
+        <Grid ColumnDefinitions="50,*,50" Padding="15,0" >
             <Button Text="←" 
                     FontSize="20"
                     BackgroundColor="Transparent"
@@ -94,114 +99,114 @@
                 <VerticalStackLayout Spacing="0" Padding="0" IsVisible="{Binding IsLoading, Converter={StaticResource InvertedBoolConverter}}">
                     
                     <!-- 头像和用户名区域 -->
-                    <VerticalStackLayout Spacing="15" Padding="20" HorizontalOptions="Center" Margin="0,20,0,0">
+                    <VerticalStackLayout Spacing="15" Padding="24" HorizontalOptions="Center" Margin="0,20,0,0">
                         <Frame WidthRequest="100" HeightRequest="100" CornerRadius="50" Padding="0" HorizontalOptions="Center" HasShadow="False" BorderColor="Transparent">
-                            <Image Source="{Binding ProfileInfo.AvatarUrl}"
+                            <Image Source="{Binding ProfileInfo.AvatarSource}"
                                    Aspect="AspectFill"/>
                         </Frame>
                         <Label Text="{Binding ProfileInfo.Username}"
                                FontSize="18"
                                FontAttributes="Bold"
                                HorizontalOptions="Center"
-                               TextColor="#1985DB"/>
+                               TextColor="{AppThemeBinding Light=#1985DB, Dark=#5DADE2}"/>
                     </VerticalStackLayout>
 
                     <!-- 分隔线 -->
-                    <BoxView Color="#E0E0E0" HeightRequest="1" Margin="0,10,0,10"/>
+                    <BoxView HeightRequest="1" Margin="0,10,0,10" Color="{AppThemeBinding Light=#E0E0E0, Dark=#3D3D3D}"/>
 
                     <!-- 账户信息区域 -->
-                    <VerticalStackLayout Padding="15" Spacing="12">
-                        <Label Text="账户信息" FontSize="14" FontAttributes="Bold" TextColor="#1985DB"/>
+                    <VerticalStackLayout Padding="20" Spacing="14" BackgroundColor="{AppThemeBinding Light=#F6F8FC, Dark=#151A24}" Margin="12,0">
+                        <Label Text="账户信息" FontSize="14" FontAttributes="Bold" TextColor="{AppThemeBinding Light=#1985DB, Dark=#5DADE2}"/>
                         
                         <!-- 第一行：UID | 空间访问量 | 邮箱状态 -->
                         <Grid ColumnDefinitions="*,*,*" ColumnSpacing="10">
                             <VerticalStackLayout Spacing="4">
-                                <Label Text="UID" FontSize="12" TextColor="Gray"/>
-                                <Label Text="{Binding ProfileInfo.Uid}" FontSize="13" FontAttributes="Bold" TextColor="#333"/>
+                                <Label Text="UID" FontSize="12" TextColor="{AppThemeBinding Light=Gray, Dark=#B0B0B0}"/>
+                                <Label Text="{Binding ProfileInfo.Uid}" FontSize="13" FontAttributes="Bold" TextColor="{AppThemeBinding Light=#333, Dark=White}"/>
                             </VerticalStackLayout>
                             <VerticalStackLayout Spacing="4" Grid.Column="1">
-                                <Label Text="空间访问量" FontSize="12" TextColor="Gray"/>
-                                <Label Text="{Binding ProfileInfo.SpacePV}" FontSize="13" FontAttributes="Bold" TextColor="#333"/>
+                                <Label Text="空间访问量" FontSize="12" TextColor="{AppThemeBinding Light=Gray, Dark=#B0B0B0}"/>
+                                <Label Text="{Binding ProfileInfo.SpacePV}" FontSize="13" FontAttributes="Bold" TextColor="{AppThemeBinding Light=#333, Dark=White}"/>
                             </VerticalStackLayout>
                             <VerticalStackLayout Spacing="4" Grid.Column="2">
-                                <Label Text="邮箱状态" FontSize="12" TextColor="Gray"/>
-                                <Label Text="{Binding ProfileInfo.EmailStatus}" FontSize="13" FontAttributes="Bold" TextColor="#333"/>
+                                <Label Text="邮箱状态" FontSize="12" TextColor="{AppThemeBinding Light=Gray, Dark=#B0B0B0}"/>
+                                <Label Text="{Binding ProfileInfo.EmailStatus}" FontSize="13" FontAttributes="Bold" TextColor="{AppThemeBinding Light=#333, Dark=White}"/>
                             </VerticalStackLayout>
                         </Grid>
 
                         <!-- 第二行：回帖数 | 主题数 | 好友数 -->
                         <Grid ColumnDefinitions="*,*,*" ColumnSpacing="10">
                             <VerticalStackLayout Spacing="4">
-                                <Label Text="回帖数" FontSize="12" TextColor="Gray"/>
-                                <Label Text="{Binding ProfileInfo.ReplyCount}" FontSize="13" FontAttributes="Bold" TextColor="#333"/>
+                                <Label Text="回帖数" FontSize="12" TextColor="{AppThemeBinding Light=Gray, Dark=#B0B0B0}"/>
+                                <Label Text="{Binding ProfileInfo.ReplyCount}" FontSize="13" FontAttributes="Bold" TextColor="{AppThemeBinding Light=#333, Dark=White}"/>
                             </VerticalStackLayout>
                             <VerticalStackLayout Spacing="4" Grid.Column="1">
-                                <Label Text="主题数" FontSize="12" TextColor="Gray"/>
-                                <Label Text="{Binding ProfileInfo.ThreadCount}" FontSize="13" FontAttributes="Bold" TextColor="#333"/>
+                                <Label Text="主题数" FontSize="12" TextColor="{AppThemeBinding Light=Gray, Dark=#B0B0B0}"/>
+                                <Label Text="{Binding ProfileInfo.ThreadCount}" FontSize="13" FontAttributes="Bold" TextColor="{AppThemeBinding Light=#333, Dark=White}"/>
                             </VerticalStackLayout>
                             <VerticalStackLayout Spacing="4" Grid.Column="2">
-                                <Label Text="好友数" FontSize="12" TextColor="Gray"/>
-                                <Label Text="{Binding ProfileInfo.FriendCount}" FontSize="13" FontAttributes="Bold" TextColor="#333"/>
+                                <Label Text="好友数" FontSize="12" TextColor="{AppThemeBinding Light=Gray, Dark=#B0B0B0}"/>
+                                <Label Text="{Binding ProfileInfo.FriendCount}" FontSize="13" FontAttributes="Bold" TextColor="{AppThemeBinding Light=#333, Dark=White}"/>
                             </VerticalStackLayout>
                         </Grid>
 
                         <!-- 第三行：积分 | PB币 | 威望 -->
                         <Grid ColumnDefinitions="*,*,*" ColumnSpacing="10">
                             <VerticalStackLayout Spacing="4">
-                                <Label Text="积分" FontSize="12" TextColor="Gray"/>
-                                <Label Text="{Binding ProfileInfo.Credits}" FontSize="13" FontAttributes="Bold" TextColor="#333"/>
+                                <Label Text="积分" FontSize="12" TextColor="{AppThemeBinding Light=Gray, Dark=#B0B0B0}"/>
+                                <Label Text="{Binding ProfileInfo.Credits}" FontSize="13" FontAttributes="Bold" TextColor="{AppThemeBinding Light=#333, Dark=White}"/>
                             </VerticalStackLayout>
                             <VerticalStackLayout Spacing="4" Grid.Column="1">
-                                <Label Text="PB币" FontSize="12" TextColor="Gray"/>
-                                <Label Text="{Binding ProfileInfo.PBCoins}" FontSize="13" FontAttributes="Bold" TextColor="#333"/>
+                                <Label Text="PB币" FontSize="12" TextColor="{AppThemeBinding Light=Gray, Dark=#B0B0B0}"/>
+                                <Label Text="{Binding ProfileInfo.PBCoins}" FontSize="13" FontAttributes="Bold" TextColor="{AppThemeBinding Light=#333, Dark=White}"/>
                             </VerticalStackLayout>
                             <VerticalStackLayout Spacing="4" Grid.Column="2">
-                                <Label Text="威望" FontSize="12" TextColor="Gray"/>
-                                <Label Text="{Binding ProfileInfo.Reputation}" FontSize="13" FontAttributes="Bold" TextColor="#333"/>
+                                <Label Text="威望" FontSize="12" TextColor="{AppThemeBinding Light=Gray, Dark=#B0B0B0}"/>
+                                <Label Text="{Binding ProfileInfo.Reputation}" FontSize="13" FontAttributes="Bold" TextColor="{AppThemeBinding Light=#333, Dark=White}"/>
                             </VerticalStackLayout>
                         </Grid>
 
                         <!-- 第四行：贡献 | 技术 | 活跃 -->
                         <Grid ColumnDefinitions="*,*,*" ColumnSpacing="10">
                             <VerticalStackLayout Spacing="4">
-                                <Label Text="贡献" FontSize="12" TextColor="Gray"/>
-                                <Label Text="{Binding ProfileInfo.Contribution}" FontSize="13" FontAttributes="Bold" TextColor="#333"/>
+                                <Label Text="贡献" FontSize="12" TextColor="{AppThemeBinding Light=Gray, Dark=#B0B0B0}"/>
+                                <Label Text="{Binding ProfileInfo.Contribution}" FontSize="13" FontAttributes="Bold" TextColor="{AppThemeBinding Light=#333, Dark=White}"/>
                             </VerticalStackLayout>
                             <VerticalStackLayout Spacing="4" Grid.Column="1">
-                                <Label Text="技术" FontSize="12" TextColor="Gray"/>
-                                <Label Text="{Binding ProfileInfo.Technology}" FontSize="13" FontAttributes="Bold" TextColor="#333"/>
+                                <Label Text="技术" FontSize="12" TextColor="{AppThemeBinding Light=Gray, Dark=#B0B0B0}"/>
+                                <Label Text="{Binding ProfileInfo.Technology}" FontSize="13" FontAttributes="Bold" TextColor="{AppThemeBinding Light=#333, Dark=White}"/>
                             </VerticalStackLayout>
                             <VerticalStackLayout Spacing="4" Grid.Column="2">
-                                <Label Text="活跃" FontSize="12" TextColor="Gray"/>
-                                <Label Text="{Binding ProfileInfo.Activity}" FontSize="13" FontAttributes="Bold" TextColor="#333"/>
+                                <Label Text="活跃" FontSize="12" TextColor="{AppThemeBinding Light=Gray, Dark=#B0B0B0}"/>
+                                <Label Text="{Binding ProfileInfo.Activity}" FontSize="13" FontAttributes="Bold" TextColor="{AppThemeBinding Light=#333, Dark=White}"/>
                             </VerticalStackLayout>
                         </Grid>
 
                         <!-- 第五行：记录数 | 日志数 | 相册数 -->
                         <Grid ColumnDefinitions="*,*,*" ColumnSpacing="10">
                             <VerticalStackLayout Spacing="4">
-                                <Label Text="记录数" FontSize="12" TextColor="Gray"/>
-                                <Label Text="{Binding ProfileInfo.RecordCount}" FontSize="13" FontAttributes="Bold" TextColor="#333"/>
+                                <Label Text="记录数" FontSize="12" TextColor="{AppThemeBinding Light=Gray, Dark=#B0B0B0}"/>
+                                <Label Text="{Binding ProfileInfo.RecordCount}" FontSize="13" FontAttributes="Bold" TextColor="{AppThemeBinding Light=#333, Dark=White}"/>
                             </VerticalStackLayout>
                             <VerticalStackLayout Spacing="4" Grid.Column="1">
-                                <Label Text="日志数" FontSize="12" TextColor="Gray"/>
-                                <Label Text="{Binding ProfileInfo.BlogCount}" FontSize="13" FontAttributes="Bold" TextColor="#333"/>
+                                <Label Text="日志数" FontSize="12" TextColor="{AppThemeBinding Light=Gray, Dark=#B0B0B0}"/>
+                                <Label Text="{Binding ProfileInfo.BlogCount}" FontSize="13" FontAttributes="Bold" TextColor="{AppThemeBinding Light=#333, Dark=White}"/>
                             </VerticalStackLayout>
                             <VerticalStackLayout Spacing="4" Grid.Column="2">
-                                <Label Text="相册数" FontSize="12" TextColor="Gray"/>
-                                <Label Text="{Binding ProfileInfo.AlbumCount}" FontSize="13" FontAttributes="Bold" TextColor="#333"/>
+                                <Label Text="相册数" FontSize="12" TextColor="{AppThemeBinding Light=Gray, Dark=#B0B0B0}"/>
+                                <Label Text="{Binding ProfileInfo.AlbumCount}" FontSize="13" FontAttributes="Bold" TextColor="{AppThemeBinding Light=#333, Dark=White}"/>
                             </VerticalStackLayout>
                         </Grid>
 
                         <!-- 第六行：分享数 | 已用空间 -->
                         <Grid ColumnDefinitions="*,*,*" ColumnSpacing="10">
                             <VerticalStackLayout Spacing="4">
-                                <Label Text="分享数" FontSize="12" TextColor="Gray"/>
-                                <Label Text="{Binding ProfileInfo.ShareCount}" FontSize="13" FontAttributes="Bold" TextColor="#333"/>
+                                <Label Text="分享数" FontSize="12" TextColor="{AppThemeBinding Light=Gray, Dark=#B0B0B0}"/>
+                                <Label Text="{Binding ProfileInfo.ShareCount}" FontSize="13" FontAttributes="Bold" TextColor="{AppThemeBinding Light=#333, Dark=White}"/>
                             </VerticalStackLayout>
                             <VerticalStackLayout Spacing="4" Grid.Column="1">
-                                <Label Text="已用空间" FontSize="12" TextColor="Gray"/>
-                                <Label Text="{Binding ProfileInfo.UsedSpace}" FontSize="13" FontAttributes="Bold" TextColor="#333"/>
+                                <Label Text="已用空间" FontSize="12" TextColor="{AppThemeBinding Light=Gray, Dark=#B0B0B0}"/>
+                                <Label Text="{Binding ProfileInfo.UsedSpace}" FontSize="13" FontAttributes="Bold" TextColor="{AppThemeBinding Light=#333, Dark=White}"/>
                             </VerticalStackLayout>
                             <!-- Empty cell for layout -->
                             <Grid Grid.Column="2"/>
@@ -209,11 +214,11 @@
                     </VerticalStackLayout>
 
                     <!-- 分隔线 -->
-                    <BoxView Color="#E0E0E0" HeightRequest="1" Margin="0,10,0,10"/>
+                    <BoxView HeightRequest="1" Margin="0,10,0,10" Color="{AppThemeBinding Light=#E0E0E0, Dark=#3D3D3D}"/>
 
                     <!-- 荣誉信息区域 -->
                     <VerticalStackLayout Padding="15" Spacing="12">
-                        <Label Text="荣誉信息" FontSize="14" FontAttributes="Bold" TextColor="#1985DB"/>
+                        <Label Text="荣誉信息" FontSize="14" FontAttributes="Bold" TextColor="{AppThemeBinding Light=#1985DB, Dark=#5DADE2}"/>
                         
                         <!-- 勋章列表 -->
                         <CollectionView ItemsSource="{Binding ProfileInfo.Medals}"
@@ -227,15 +232,15 @@
                             <CollectionView.ItemTemplate>
                                 <DataTemplate>
                                     <VerticalStackLayout Spacing="8" HorizontalOptions="Center">
-                                        <Image Source="{Binding ImageUrl}"
+                                        <Image Source="{Binding ImageSource}"
                                               WidthRequest="60"
                                               HeightRequest="60"
                                               Aspect="AspectFit"
                                               HorizontalOptions="Center"/>
                                         <Label Text="{Binding Name}"
                                               FontSize="12"
+                                              TextColor="{AppThemeBinding Light=Black, Dark=White}"
                                               HorizontalTextAlignment="Center"
-                                              TextColor="#333"
                                               LineBreakMode="WordWrap"
                                               MaxLines="2"/>
                                     </VerticalStackLayout>
@@ -247,54 +252,54 @@
                         <Label Text="暂无勋章，加油获取！"
                               IsVisible="{Binding HasMedals, Converter={StaticResource InvertedBoolConverter}}"
                               FontSize="13"
-                              TextColor="Gray"
+                              TextColor="{AppThemeBinding Light=Gray, Dark=#B0B0B0}"
                               HorizontalOptions="Center"
                               Padding="15"/>
                     </VerticalStackLayout>
 
                     <!-- 分隔线 -->
-                    <BoxView Color="#E0E0E0" HeightRequest="1" Margin="0,10,0,10"/>
+                    <BoxView HeightRequest="1" Margin="0,10,0,10" Color="{AppThemeBinding Light=#E0E0E0, Dark=#3D3D3D}"/>
 
                     <!-- 活跃概况区域 -->
                     <VerticalStackLayout Padding="15" Spacing="12">
-                        <Label Text="活跃概况" FontSize="14" FontAttributes="Bold" TextColor="#1985DB"/>
+                        <Label Text="活跃概况" FontSize="14" FontAttributes="Bold" TextColor="{AppThemeBinding Light=#1985DB, Dark=#5DADE2}"/>
 
                         <!-- 第一行：用户组 | 注册时间 | 最后访问 -->
                         <Grid ColumnDefinitions="*,*,*" ColumnSpacing="10">
                             <VerticalStackLayout Spacing="4">
-                                <Label Text="用户组" FontSize="12" TextColor="Gray"/>
-                                <Label Text="{Binding ProfileInfo.UserGroup}" FontSize="13" FontAttributes="Bold" TextColor="#333"/>
+                                <Label Text="用户组" FontSize="12" TextColor="{AppThemeBinding Light=Gray, Dark=#B0B0B0}"/>
+                                <Label Text="{Binding ProfileInfo.UserGroup}" FontSize="13" FontAttributes="Bold" TextColor="{AppThemeBinding Light=#333, Dark=White}"/>
                             </VerticalStackLayout>
                             <VerticalStackLayout Spacing="4" Grid.Column="1">
-                                <Label Text="注册时间" FontSize="12" TextColor="Gray"/>
-                                <Label Text="{Binding ProfileInfo.RegisterTime}" FontSize="13" FontAttributes="Bold" TextColor="#333" LineBreakMode="WordWrap"/>
+                                <Label Text="注册时间" FontSize="12" TextColor="{AppThemeBinding Light=Gray, Dark=#B0B0B0}"/>
+                                <Label Text="{Binding ProfileInfo.RegisterTime}" FontSize="13" FontAttributes="Bold" TextColor="{AppThemeBinding Light=#333, Dark=White}" LineBreakMode="WordWrap"/>
                             </VerticalStackLayout>
                             <VerticalStackLayout Spacing="4" Grid.Column="2">
-                                <Label Text="最后访问" FontSize="12" TextColor="Gray"/>
-                                <Label Text="{Binding ProfileInfo.LastAccessTime}" FontSize="13" FontAttributes="Bold" TextColor="#333" LineBreakMode="WordWrap"/>
+                                <Label Text="最后访问" FontSize="12" TextColor="{AppThemeBinding Light=Gray, Dark=#B0B0B0}"/>
+                                <Label Text="{Binding ProfileInfo.LastAccessTime}" FontSize="13" FontAttributes="Bold" TextColor="{AppThemeBinding Light=#333, Dark=White}" LineBreakMode="WordWrap"/>
                             </VerticalStackLayout>
                         </Grid>
 
                         <!-- 第二行：上次访问 | 上次活动时间 | 上次发表时间 -->
                         <Grid ColumnDefinitions="*,*,*" ColumnSpacing="10">
                             <VerticalStackLayout Spacing="4">
-                                <Label Text="上次访问IP" FontSize="12" TextColor="Gray"/>
-                                <Label Text="{Binding ProfileInfo.LastVisitIP}" FontSize="13" FontAttributes="Bold" TextColor="#333" LineBreakMode="WordWrap"/>
+                                <Label Text="上次访问IP" FontSize="12" TextColor="{AppThemeBinding Light=Gray, Dark=#B0B0B0}"/>
+                                <Label Text="{Binding ProfileInfo.LastVisitIP}" FontSize="13" FontAttributes="Bold" TextColor="{AppThemeBinding Light=#333, Dark=White}" LineBreakMode="WordWrap"/>
                             </VerticalStackLayout>
                             <VerticalStackLayout Spacing="4" Grid.Column="1">
-                                <Label Text="上次活动时间" FontSize="12" TextColor="Gray"/>
-                                <Label Text="{Binding ProfileInfo.LastActivityTime}" FontSize="13" FontAttributes="Bold" TextColor="#333" LineBreakMode="WordWrap"/>
+                                <Label Text="上次活动时间" FontSize="12" TextColor="{AppThemeBinding Light=Gray, Dark=#B0B0B0}"/>
+                                <Label Text="{Binding ProfileInfo.LastActivityTime}" FontSize="13" FontAttributes="Bold" TextColor="{AppThemeBinding Light=#333, Dark=White}" LineBreakMode="WordWrap"/>
                             </VerticalStackLayout>
                             <VerticalStackLayout Spacing="4" Grid.Column="2">
-                                <Label Text="上次发表时间" FontSize="12" TextColor="Gray"/>
-                                <Label Text="{Binding ProfileInfo.LastPostTime}" FontSize="13" FontAttributes="Bold" TextColor="#333" LineBreakMode="WordWrap"/>
+                                <Label Text="上次发表时间" FontSize="12" TextColor="{AppThemeBinding Light=Gray, Dark=#B0B0B0}"/>
+                                <Label Text="{Binding ProfileInfo.LastPostTime}" FontSize="13" FontAttributes="Bold" TextColor="{AppThemeBinding Light=#333, Dark=White}" LineBreakMode="WordWrap"/>
                             </VerticalStackLayout>
                         </Grid>
 
                         <!-- 第三行：所在时区 -->
-                        <VerticalStackLayout Spacing="4">
-                            <Label Text="所在时区" FontSize="12" TextColor="Gray"/>
-                            <Label Text="{Binding ProfileInfo.Timezone}" FontSize="13" FontAttributes="Bold" TextColor="#333"/>
+                            <VerticalStackLayout Spacing="4">
+                            <Label Text="所在时区" FontSize="12" TextColor="{AppThemeBinding Light=Gray, Dark=#B0B0B0}"/>
+                            <Label Text="{Binding ProfileInfo.Timezone}" FontSize="13" FontAttributes="Bold" TextColor="{AppThemeBinding Light=#333, Dark=White}"/>
                         </VerticalStackLayout>
                     </VerticalStackLayout>
                     
@@ -303,14 +308,23 @@
         </ScrollView>
 
         <!-- Bottom Navigation -->
-        <Grid Grid.Row="2" ColumnDefinitions="*,*">
-            <Button Text="刷新" 
-                    Command="{Binding RefreshCommand}"
-                  Style="{StaticResource BottomNaviButtonStyle}" Margin="2,0" VerticalOptions="End"/>
-            <Button Text="返回" 
-                    Command="{Binding GoBackCommand}"
-                Style="{StaticResource BottomNaviButtonStyle}" Margin="2,0" VerticalOptions="End"
-                    Grid.Column="1"/>
+        <Grid Grid.Row="2" ColumnDefinitions="*,*" BackgroundColor="{AppThemeBinding Light=#F6F8FC, Dark=#202938}" Padding="0,5">
+            <StackLayout>
+                <Button Command="{Binding RefreshCommand}" Style="{StaticResource BottomNaviButtonStyle}" >
+                    <Button.ImageSource>
+                        <FontImageSource Glyph="&#xE72c;" Size="Medium" Color="{AppThemeBinding Light=Black, Dark=White}" FontFamily="Segoe Fluent Icons"/>
+                    </Button.ImageSource>
+                </Button>
+                <Label Text="刷新" HorizontalOptions="Center" FontSize="12" TextColor="{AppThemeBinding Light=Black, Dark=White}"/>
+            </StackLayout>
+            <StackLayout Grid.Column="1">
+                <Button Command="{Binding GoBackCommand}" Style="{StaticResource BottomNaviButtonStyle}">
+                    <Button.ImageSource>
+                        <FontImageSource  Glyph="&#xE760;" Size="Large" Color="{AppThemeBinding Light=Black, Dark=White}" FontFamily="Segoe Fluent Icons"/>
+                    </Button.ImageSource>
+                </Button>
+                <Label Text="返回" HorizontalOptions="Center" FontSize="12" TextColor="{AppThemeBinding Light=Black, Dark=White}"/>
+            </StackLayout>
         </Grid>
     </Grid>
 </ContentPage>

@@ -184,13 +184,29 @@ public partial class XmlParsingService
                 reply.IPLocation = HtmlDecode(ipMatch.Groups[1].Value.Trim());
             }
 
-            // 7. 提取回帖内容
+            // 7. 提取楼层中的回帖奖励，例如：回帖奖励 +10 PB币
+            var rewardPattern = @"<div[^>]*class=""[^""]*\bcm\b[^""]*""[^>]*>.*?<h3[^>]*class=""[^""]*\bpsth\b[^""]*""[^>]*>(?<reward>.*?)</h3>";
+            var rewardMatches = Regex.Matches(postHtml, rewardPattern, RegexOptions.IgnoreCase | RegexOptions.Singleline);
+            foreach (Match rewardMatch in rewardMatches)
+            {
+                var rewardText = HtmlDecode(StripHtmlTags(rewardMatch.Groups["reward"].Value));
+                rewardText = Regex.Replace(rewardText, @"\s+", " ").Trim();
+
+                // psth 也用于“点评”，只有明确包含“回帖奖励”时才显示。
+                if (rewardText.Contains("回帖奖励", StringComparison.Ordinal))
+                {
+                    reply.ReplyRewardText = rewardText;
+                    break;
+                }
+            }
+
+            // 8. 提取回帖内容
             var messageHtml = ExtractReplyMessageContent(postHtml);
             if (!string.IsNullOrEmpty(messageHtml))
             {
-                reply.ContentElements = ParseRichTextContent(messageHtml, skipEditStatus: false);
+                reply.ContentElements = ParseRichTextContent(postHtml,messageHtml, skipEditStatus: false);
 
-                // 8a. 提取回帖中的附件
+                // 9a. 提取回帖中的附件
                 // 注意：ParseRichTextContent 可能已经从富文本中提取了附件
                 // ExtractReplyAttachments 会再次提取附件元素
                 // 需要对两个源的附件进行去重，防止添加重复的附件
@@ -230,7 +246,7 @@ public partial class XmlParsingService
                 reply.PlainTextContent = GeneratePlainText(reply.ContentElements);
             }
 
-            // 8. 提取编辑状态
+            // 9. 提取编辑状态
             var editStatusPattern = @"<i[^>]*class=""pstatus""[^>]*>\s*本帖最后由\s*([^\s于]+)\s*于\s*([^\s]+(?:\s+\d+:\d+)?)\s*编辑\s*</i>";
             var editStatusMatch = Regex.Match(postHtml, editStatusPattern, RegexOptions.IgnoreCase | RegexOptions.Singleline);
             if (editStatusMatch.Success)
@@ -241,7 +257,7 @@ public partial class XmlParsingService
                 Debug.WriteLine($" 回帖编辑状态: {reply.EditStatus}");
             }
 
-            // 9. 提取评论（点评）
+            // 10. 提取评论（点评）
             var comments = ExtractReplyComments(postHtml);
             if (comments != null && comments.Count > 0)
             {
@@ -249,7 +265,7 @@ public partial class XmlParsingService
                 Debug.WriteLine($" 回帖评论数: {comments.Count}");
             }
 
-            // 10. 提取评分信息
+            // 11. 提取评分信息
             var ratingSummary = ExtractReplyRatings(postHtml);
             if (ratingSummary != null)
             {
@@ -257,7 +273,7 @@ public partial class XmlParsingService
                 Debug.WriteLine($" 回帖评分数: {ratingSummary.TotalRatingCount}");
             }
 
-            // ✅ 新增：11. 提取评分URL（用于评分按钮）
+            // ✅ 新增：12. 提取评分URL（用于评分按钮）
             var ratingUrl = ExtractRatingUrl(postHtml);
             if (!string.IsNullOrEmpty(ratingUrl))
             {

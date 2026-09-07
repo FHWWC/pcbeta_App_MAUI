@@ -14,12 +14,16 @@
     <ContentPage.Resources>
         <ResourceDictionary>
             <Style x:Key="BottomNaviButtonStyle" TargetType="Button">
-                <Setter Property="BackgroundColor" Value="DodgerBlue"/>
-                <Setter Property="TextColor" Value="White"/>
-                <Setter Property="CornerRadius" Value="0"/>
+                <Setter Property="BackgroundColor" Value="Transparent"/>
+                <Setter Property="TextColor" Value="{AppThemeBinding Light=Black, Dark=White}"/>
+                <Setter Property="CornerRadius" Value="50"/>
+                <Setter Property="BorderWidth" Value="2"/>
+                <Setter Property="BorderColor" Value="LightBlue"/>
                 <Setter Property="Padding" Value="0"/>
-                <Setter Property="HeightRequest" Value="40"/>
-                <Setter Property="VisualStateManager.VisualStateGroups">
+                <Setter Property="HeightRequest" Value="50"/>
+                <Setter Property="WidthRequest" Value="50"/>
+                <!--
+                                <Setter Property="VisualStateManager.VisualStateGroups">
                     <VisualStateGroupList>
                         <VisualStateGroup Name="CommonStates">
                             <VisualState Name="Normal">
@@ -40,6 +44,7 @@
                         </VisualStateGroup>
                     </VisualStateGroupList>
                 </Setter>
+                -->
             </Style>
             <Style x:Key="MordenButtonStyle" TargetType="Button">
                 <Setter Property="BackgroundColor" Value="DodgerBlue"/>
@@ -71,29 +76,42 @@
         </ResourceDictionary>
     </ContentPage.Resources>
     
-    <Grid RowDefinitions="*,60">
-        <ScrollView>
-            <VerticalStackLayout Padding="15" Spacing="15">
+    <Grid RowDefinitions="*,100" BackgroundColor="{AppThemeBinding Light=#F6F8FC, Dark=#151A24}">
+        <ScrollView x:Name="MainScrollView" BackgroundColor="{AppThemeBinding Light=White, Dark=#1E1E1E}">
+            <VerticalStackLayout Padding="18,16" Spacing="16" BackgroundColor="{AppThemeBinding Light=#F6F8FC, Dark=#151A24}">
                 <!-- 帖子标题 -->
                 <Label Text="{Binding ThreadTitle}"
                    FontSize="20" 
                    FontAttributes="Bold"
-                   LineBreakMode="WordWrap"/>
+                   LineBreakMode="WordWrap"
+                   TextColor="{AppThemeBinding Light=Black, Dark=White}"/>
 
                 <!-- 作者信息 -->
-                <Border Padding="12" StrokeShape="{RoundRectangle CornerRadius=5}" Stroke="LightGray" StrokeThickness="2">
+                <Border Padding="14" StrokeShape="{RoundRectangle CornerRadius=14}" Stroke="{AppThemeBinding Light=#E2E8F0, Dark=#334155}" StrokeThickness="1" BackgroundColor="{AppThemeBinding Light=White, Dark=#202938}">
                     <VerticalStackLayout Spacing="5">
                         <HorizontalStackLayout>
-                            <Label FontAttributes="Bold">作者：</Label>
-                            <Label Text="{Binding Author}" FontAttributes="Bold"/>
+                            <Label FontAttributes="Bold" TextColor="{AppThemeBinding Light=Black, Dark=White}">作者：</Label>
+                            <Label Text="{Binding Author}" FontAttributes="Bold" TextColor="{AppThemeBinding Light=Black, Dark=White}"/>
                         </HorizontalStackLayout>
                         <HorizontalStackLayout>
-                            <Label Text="{Binding PostTime}" TextColor="Gray" FontSize="12"/>
-                            <Label Text="帖子ID" TextColor="Gray" FontSize="12"  Margin="10,0,0,0"/>
-                            <Label Text="{Binding ThreadID}" TextColor="Gray" FontSize="12" Margin="5,0,0,0"/>
-                            <Label Text="{Binding OtherIfm}" TextColor="Gray" FontSize="12" Margin="20,0,0,0"/>
+                            <Label Text="{Binding PostTime}" TextColor="{AppThemeBinding Light=Gray, Dark=#B0B0B0}" FontSize="12"/>
+                            <Label Text="帖子ID" TextColor="{AppThemeBinding Light=Gray, Dark=#B0B0B0}" FontSize="12"  Margin="10,0,0,0"/>
+                            <Label Text="{Binding ThreadID}" TextColor="{AppThemeBinding Light=Gray, Dark=#B0B0B0}" FontSize="12" Margin="5,0,0,0"/>
+                            <Label Text="{Binding OtherIfm}" TextColor="{AppThemeBinding Light=Gray, Dark=#B0B0B0}" FontSize="12" Margin="20,0,0,0"/>
                         </HorizontalStackLayout>
                     </VerticalStackLayout>
+                </Border>
+
+                <Border Padding="10"
+                        StrokeShape="{RoundRectangle CornerRadius=8}"
+                        Stroke="#F0B429"
+                        StrokeThickness="1"
+                        BackgroundColor="{AppThemeBinding Light=#FFF8E1, Dark=#3A321E}"
+                        IsVisible="{Binding ReplyRewardText, Converter={StaticResource StringNotNullToBoolConverter}}">
+                    <Label Text="{Binding ReplyRewardText}"
+                           FontSize="12"
+                           TextColor="{AppThemeBinding Light=#8A5A00, Dark=#FFD166}"
+                           LineBreakMode="WordWrap" />
                 </Border>
 
                 <!--  编辑状态信息 - 本帖最后由...编辑 -->
@@ -101,6 +119,7 @@
                     StrokeShape="{RoundRectangle CornerRadius=5}" 
                     Stroke="#FFB6C1" 
                     StrokeThickness="1"
+                    BackgroundColor="{AppThemeBinding Light=White, Dark=#2D2D2D}"
                     IsVisible="{Binding EditStatus, Converter={StaticResource StringNotNullToBoolConverter}}">
                     <HorizontalStackLayout Spacing="5">
                         <Label Text="✏️" FontSize="14"/>
@@ -116,6 +135,7 @@
                     StrokeShape="{RoundRectangle CornerRadius=5}" 
                     Stroke="#90EE90" 
                     StrokeThickness="1"
+                    BackgroundColor="{AppThemeBinding Light=White, Dark=#2D2D2D}"
                     IsVisible="{Binding ModerationInfo, Converter={StaticResource StringNotNullToBoolConverter}}">
                     <HorizontalStackLayout Spacing="5">
                         <Label Text="✓" FontSize="14" TextColor="Green"/>
@@ -131,12 +151,79 @@
                                 Spacing="5"
                                 Padding="0"/>
 
+                <Border Padding="15"
+                        StrokeShape="{RoundRectangle CornerRadius=5}"
+                        Stroke="#D9EAF7"
+                        BackgroundColor="{AppThemeBinding Light=#F5FAFF, Dark=#263746}"
+                        IsVisible="{Binding HasPoll}">
+                    <VerticalStackLayout Spacing="10">
+                        <Label Text="投票"
+                               FontSize="17"
+                               FontAttributes="Bold"
+                               TextColor="#1985DB"/>
+                        <Label Text="{Binding Poll.Summary}"
+                               FontSize="12"
+                               TextColor="{AppThemeBinding Light=#555555, Dark=#DDDDDD}" FontAttributes="Bold"/>
+                        <Label Text="{Binding Poll.EndTimeText}"
+                               FontSize="12"
+                               IsVisible="{Binding Poll.EndTimeText, Converter={StaticResource StringNotNullToBoolConverter}}"
+                               TextColor="#C56A00" FontAttributes="Bold"/>
+                        <CollectionView ItemsSource="{Binding Poll.Options}" SelectionMode="None">
+                            <CollectionView.ItemTemplate>
+                                <DataTemplate x:DataType="models:PollOption">
+                                    <VerticalStackLayout Spacing="4" Padding="0,5">
+                                        <Grid ColumnDefinitions="Auto,* ,Auto" ColumnSpacing="8">
+                                            <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay}"
+                                                      IsEnabled="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.Poll.CanVote}"
+                                                      IsVisible="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.Poll.CanVote}"
+                                                      CheckedChanged="PollOption_CheckedChanged"/>
+                                            <VerticalStackLayout Grid.Column="1" Spacing="3">
+                                                <Image Source="{Binding ImageUrl}"
+                                                       HeightRequest="90"
+                                                       Aspect="AspectFit"
+                                                       IsVisible="{Binding ImageUrl, Converter={StaticResource StringNotNullToBoolConverter}}"/>
+                                                <Label Text="{Binding Text}"
+                                                       FontSize="13"
+                                                       LineBreakMode="WordWrap"
+                                                       TextColor="{AppThemeBinding Light=#222222, Dark=White}"/>
+                                                <ProgressBar Progress="{Binding Percentage, Converter={StaticResource PercentageToProgressConverter}}"
+                                                             ProgressColor="#1985DB"
+                                                             BackgroundColor="{AppThemeBinding Light=#D9EAF7, Dark=#40566B}"
+                                                             HeightRequest="8"
+                                                             VerticalOptions="Center"
+                                                             Margin="0,2,0,0"/>
+                                            </VerticalStackLayout>
+                                            <Label Grid.Column="2"
+                                                   Text="{Binding Percentage, StringFormat='{0:F2}%'}"
+                                                   FontSize="12"
+                                                   VerticalOptions="Center"
+                                                   TextColor="#1985DB"/>
+                                        </Grid>
+                                        <Label Text="{Binding VoteCount, StringFormat='{0} 票'}"
+                                               FontSize="11"
+                                               Margin="38,0,0,0"
+                                               TextColor="{AppThemeBinding Light=#888888, Dark=#BBBBBB}"/>
+                                    </VerticalStackLayout>
+                                </DataTemplate>
+                            </CollectionView.ItemTemplate>
+                        </CollectionView>
+                        <Label Text="{Binding Poll.Notice}"
+                               FontSize="12"
+                               IsVisible="{Binding Poll.Notice, Converter={StaticResource StringNotNullToBoolConverter}}"
+                               TextColor="#C56A00" FontAttributes="Bold"/>
+                        <Button Text="提交投票"
+                                Command="{Binding SubmitPollCommand}"
+                                IsVisible="{Binding Poll.CanVote}"
+                                Style="{StaticResource MordenButtonStyle}"/>
+                    </VerticalStackLayout>
+                </Border>
+
                 <!--  新增：点评（评论）部分 -->
                 <Border Padding="15" 
                     StrokeShape="{RoundRectangle CornerRadius=5}" 
                     Stroke="#E6F3FF" 
                     StrokeThickness="1"
-                    BackgroundColor="#F5F9FF"
+                    BackgroundColor="{AppThemeBinding Light=#F5F9FF, Dark=#2D3D4D}"
                     IsVisible="{Binding HasComments}">
                     <VerticalStackLayout Spacing="10">
                         <!--  可点击的标题栏 - 展开/收回 -->
@@ -162,12 +249,12 @@
                                     IsVisible="{Binding AreCommentsExpanded}">
                             <CollectionView.ItemTemplate>
                                 <DataTemplate x:DataType="models:CommentInfo">
-                                    <VerticalStackLayout Padding="0,8" Spacing="5" Margin="0,0,0,10">
+                                    <VerticalStackLayout Padding="0,8" Spacing="5" Margin="0,0,0,10" BackgroundColor="{AppThemeBinding Light=White, Dark=#1E1E1E}">
                                         <!-- 评论者信息行 -->
                                         <HorizontalStackLayout Spacing="8" VerticalOptions="Center">
                                             <!-- 头像 -->
                                             <Frame CornerRadius="16" Padding="0" HasShadow="False" BorderColor="Transparent">
-                                                <Image Source="{Binding AvatarUrl}"
+                                                 <Image Source="{Binding AvatarSource}"
                                                    WidthRequest="32"
                                                    HeightRequest="32"
                                                    Aspect="AspectFill"/>
@@ -181,7 +268,7 @@
                                                    TextColor="#1985DB"/>
                                                 <Label Text="{Binding Timestamp}"
                                                    FontSize="11"
-                                                   TextColor="#999999"/>
+                                                   TextColor="{AppThemeBinding Light=#999999, Dark=#B0B0B0}"/>
                                             </VerticalStackLayout>
                                         </HorizontalStackLayout>
 
@@ -190,11 +277,11 @@
                                            FontSize="12"
                                            LineBreakMode="WordWrap"
                                            Margin="40,0,0,0"
-                                           TextColor="#333333"/>
+                                           TextColor="{AppThemeBinding Light=#333333, Dark=#E0E0E0}"/>
 
                                         <!-- 分隔线 -->
                                         <BoxView HeightRequest="0.5" 
-                                             Color="#E0E0E0"
+                                             Color="{AppThemeBinding Light=#E0E0E0, Dark=#404040}"
                                              Margin="0,5,0,0"/>
                                     </VerticalStackLayout>
                                 </DataTemplate>
@@ -208,7 +295,7 @@
                     StrokeShape="{RoundRectangle CornerRadius=5}" 
                     Stroke="#FFF0F5" 
                     StrokeThickness="1"
-                    BackgroundColor="#FFF8FC"
+                    BackgroundColor="{AppThemeBinding Light=#FFF8FC, Dark=#3D2D3D}"
                     IsVisible="{Binding HasRatings}">
                     <VerticalStackLayout Spacing="10">
                         <!--  可点击的标题栏 - 展开/收回 -->
@@ -257,12 +344,12 @@
                                     IsVisible="{Binding AreRatingsExpanded}">
                             <CollectionView.ItemTemplate>
                                 <DataTemplate x:DataType="models:RatingInfo">
-                                    <VerticalStackLayout Padding="0,8" Spacing="5" Margin="0,0,0,8">
+                                    <VerticalStackLayout Padding="0,8" Spacing="5" Margin="0,0,0,8" BackgroundColor="{AppThemeBinding Light=White, Dark=#1E1E1E}">
                                         <!-- 评分者信息行 -->
                                         <HorizontalStackLayout Spacing="8" VerticalOptions="Center">
                                             <!-- 头像 -->
                                             <Frame CornerRadius="14" Padding="0" HasShadow="False" BorderColor="Transparent">
-                                                <Image Source="{Binding AvatarUrl}"
+                                                 <Image Source="{Binding AvatarSource}"
                                                    WidthRequest="28"
                                                    HeightRequest="28"
                                                    Aspect="AspectFill"/>
@@ -279,7 +366,7 @@
                                         <!-- 评分内容 -->
                                         <Label Text="{Binding RatingContent}"
                                            FontSize="11"
-                                           TextColor="#666666"
+                                           TextColor="{AppThemeBinding Light=#666666, Dark=#B0B0B0}"
                                            Margin="36,0,0,0"
                                            LineBreakMode="WordWrap"/>
                                     </VerticalStackLayout>
@@ -294,26 +381,32 @@
                     StrokeShape="{RoundRectangle CornerRadius=5}" 
                     Stroke="#d6ffd1" 
                     StrokeThickness="1"
-                    BackgroundColor="#e9ffe6" IsVisible="{Binding HasContent}">
+                    BackgroundColor="{AppThemeBinding Light=#e9ffe6, Dark=#2D3D2D}" IsVisible="{Binding HasContent}">
                     <Grid>
                         <HorizontalStackLayout HorizontalOptions="End">
-                            <!-- 分享按钮 -->
-                            <Button Style="{StaticResource BottomNaviButtonStyle}" WidthRequest="40" CornerRadius="10"  Command="{Binding ShareBtnCommand}">
+                            <!-- 收藏按钮 -->
+                            <Button Style="{StaticResource BottomNaviButtonStyle}" HeightRequest="45" WidthRequest="45" CornerRadius="10" Command="{Binding FavoriteCommand}" Margin="0,0,10,0">
                                 <Button.ImageSource>
-                                    <FontImageSource Glyph="&#xe72d;" Size="Small" Color="White" FontFamily="Segoe Fluent Icons"/>
+                                    <FontImageSource Glyph="&#xe734;" Size="Medium" Color="{AppThemeBinding Light=DodgerBlue, Dark=LightBlue}" FontFamily="Segoe Fluent Icons"/>
+                                </Button.ImageSource>
+                            </Button>
+                            <!-- 分享按钮 -->
+                            <Button Style="{StaticResource BottomNaviButtonStyle}" HeightRequest="45" WidthRequest="45" CornerRadius="10" Command="{Binding ShareBtnCommand}">
+                                <Button.ImageSource>
+                                    <FontImageSource Glyph="&#xe72d;" Size="Medium" Color="{AppThemeBinding Light=DodgerBlue, Dark=LightBlue}" FontFamily="Segoe Fluent Icons"/>
                                 </Button.ImageSource>
                             </Button>
                         </HorizontalStackLayout>
-                        
+
                     </Grid>
                 </Border>
                 
                 <!--  新增：回帖部分 -->
-                <Border Padding="15" 
+                <Border x:Name="RepliesBorder" Padding="15" 
                     StrokeShape="{RoundRectangle CornerRadius=5}" 
                     Stroke="#F0E68C" 
                     StrokeThickness="1"
-                    BackgroundColor="#FFFACD"
+                    BackgroundColor="{AppThemeBinding Light=#FFFACD, Dark=#3D3D2D}"
                     IsVisible="{Binding HasReplies}">
                     <VerticalStackLayout Spacing="12">
                         <!--  可点击的标题栏 - 展开/收回 -->
@@ -348,20 +441,20 @@
                                     SelectionMode="None"
                                     IsVisible="{Binding AreRepliesExpanded}">
                             <CollectionView.ItemTemplate>
-                                <DataTemplate x:DataType="models:ReplyInfo">
+                                <DataTemplate>
                                     <Border Padding="12" 
                                         Margin="0,0,0,12"
                                         StrokeShape="{RoundRectangle CornerRadius=5}" 
                                         Stroke="#DAA520" 
                                         StrokeThickness="1"
-                                        BackgroundColor="#FFFEF0">
+                                        BackgroundColor="{AppThemeBinding Light=#FFFEF0, Dark=#2D2D1E}">
                                         <VerticalStackLayout Spacing="8">
                                             <!-- 2. 用户信息行 -->
                                             <Grid ColumnDefinitions="200,*">
                                                 <HorizontalStackLayout Spacing="8" Padding="0,5,0,0">
                                                     <!-- 头像 -->
                                                     <Frame CornerRadius="20" Padding="0" HasShadow="False" BorderColor="#D2691E">
-                                                        <Image Source="{Binding AvatarUrl}"
+                                                         <Image Source="{Binding AvatarSource}"
                                                      WidthRequest="38"
                                                      HeightRequest="38"
                                                      Aspect="AspectFill"/>
@@ -375,7 +468,7 @@
                                                      TextColor="#D2691E"/>
                                                         <Label Text="{Binding UserId, StringFormat='UID: {0}'}"
                                                      FontSize="14"
-                                                     TextColor="#999999"/>
+                                                     TextColor="{AppThemeBinding Light=#999999, Dark=#B0B0B0}"/>
                                                     </VerticalStackLayout>
                                                 </HorizontalStackLayout>
 
@@ -384,7 +477,7 @@
                                                     <!-- 楼层号 -->
                                                     <Label Text="{Binding FloorNumber}"
                                            FontSize="14"
-                                           TextColor="#999999"
+                                           TextColor="{AppThemeBinding Light=#999999, Dark=#B0B0B0}"
                                            Grid.Column="2"
                                            HorizontalOptions="End"
                                            Margin="0,0,0,0"/>
@@ -394,15 +487,22 @@
                                                 <!-- IP属地 -->
                                                 <Label Text="{Binding IPLocation}" 
                                            FontSize="14"
-                                            TextColor="#999999"/>
+                                            TextColor="{AppThemeBinding Light=#999999, Dark=#B0B0B0}"/>
 
                                                 <!-- 发帖时间 -->
                                                 <Label Text="{Binding PostTime}"
                                            FontSize="14"
-                                           TextColor="#999999"
+                                           TextColor="{AppThemeBinding Light=#999999, Dark=#B0B0B0}"
                                            Grid.Column="1"
                                            Margin="10,0,0,0"/>
                                             </Grid>
+
+                                             <Label Text="{Binding ReplyRewardText}"
+                                                    FontSize="12"
+                                                    TextColor="#C56A00"
+                                                    LineBreakMode="WordWrap"
+                                                    IsVisible="{Binding ReplyRewardText, Converter={StaticResource StringNotNullToBoolConverter}}"
+                                                    Margin="0,0,0,2" />
 
                                             <!-- 3. 编辑状态（如有）-->
                                             <Label Text="{Binding EditStatus}"
@@ -464,7 +564,7 @@ CommandParameter="{Binding .}"/>
                                                 StrokeShape="{RoundRectangle CornerRadius=3}" 
                                                 Stroke="#E6F3FF" 
                                                 StrokeThickness="0.5"
-                                                BackgroundColor="#F9FBFD"
+                                                BackgroundColor="{AppThemeBinding Light=#F9FBFD, Dark=#1E2D3D}"
                                                 IsVisible="{Binding HasComments}">
                                                 <VerticalStackLayout Spacing="5">
                                                     <Label Text="💭 点评" 
@@ -485,7 +585,7 @@ CommandParameter="{Binding .}"/>
                                                                        FontSize="10"
                                                                        LineBreakMode="WordWrap"
                                                                        Margin="10,0,0,0"
-                                                                       TextColor="#666666"/>
+                                                                       TextColor="{AppThemeBinding Light=#666666, Dark=#B0B0B0}"/>
                                                                 </VerticalStackLayout>
                                                             </DataTemplate>
                                                         </CollectionView.ItemTemplate>
@@ -499,7 +599,7 @@ CommandParameter="{Binding .}"/>
                                                 StrokeShape="{RoundRectangle CornerRadius=3}" 
                                                 Stroke="#FFF0F5" 
                                                 StrokeThickness="0.5"
-                                                BackgroundColor="#FFF9FC"
+                                                BackgroundColor="{AppThemeBinding Light=#FFF9FC, Dark=#3D1E3D}"
                                                 IsVisible="{Binding HasRatings}">
                                                 <VerticalStackLayout Spacing="5">
                                                     <Label Text="⭐ 评分" 
@@ -520,7 +620,7 @@ CommandParameter="{Binding .}"/>
                                                                        FontSize="10"
                                                                        LineBreakMode="WordWrap"
                                                                        Margin="10,0,0,0"
-                                                                       TextColor="#666666"/>
+                                                                       TextColor="{AppThemeBinding Light=#666666, Dark=#B0B0B0}"/>
                                                                 </VerticalStackLayout>
                                                             </DataTemplate>
                                                         </CollectionView.ItemTemplate>
@@ -546,15 +646,67 @@ CommandParameter="{Binding .}"/>
                    FontSize="12"
                    IsVisible="{Binding ErrorMessage, Converter={StaticResource StringNotNullToBoolConverter}}"/>
 
-                <!-- 操作按钮 -->
-
-
             </VerticalStackLayout>
         </ScrollView>
 
+        <!-- 页面中间短提示面板（预置，默认隐藏，由 ViewModel 控制显示/隐藏） -->
+        <AbsoluteLayout IsVisible="True" InputTransparent="True" Grid.Row="0" HorizontalOptions="Center" VerticalOptions="End">
+        <Border x:Name="TransientMessageFrame"
+                Padding="10"
+                StrokeShape="{RoundRectangle CornerRadius=8}"
+                BackgroundColor="#CC000000"
+                IsVisible="{Binding TransientMessageVisible}"
+                Opacity="0"
+                HorizontalOptions="Center"
+                VerticalOptions="Center">
+            <Label Text="{Binding TransientMessageText}"
+                   TextColor="White"
+                   LineBreakMode="WordWrap"
+                   HorizontalTextAlignment="Center"/>
+        </Border>
+        </AbsoluteLayout>
+
+        <!-- 图片全屏覆盖层（在当前页面之上，不进行页面导航） -->
+        <AbsoluteLayout x:Name="ImageOverlay" IsVisible="False" BackgroundColor="#CC000000" Grid.Row="0" InputTransparent="False">
+            <ContentView x:Name="OverlayImageContainer"
+                         AbsoluteLayout.LayoutBounds="0,0,1,1"
+                         AbsoluteLayout.LayoutFlags="All" />
+
+            <Button x:Name="OverlayDownloadButton"
+                    AbsoluteLayout.LayoutBounds="0.97,0.95,50,50"
+                    AbsoluteLayout.LayoutFlags="PositionProportional"
+                    TextColor="White"
+                    Shadow="Black 0 0"
+                    BackgroundColor="Transparent"
+                    BorderColor="White"
+                    BorderWidth="2"
+                    WidthRequest="50"
+                    HeightRequest="50"
+                    CornerRadius="10">
+                <Button.ImageSource>
+                    <FontImageSource Glyph="&#xe896;" Size="Medium" Color="White" FontFamily="Segoe Fluent Icons"/>
+                </Button.ImageSource>
+            </Button>
+
+            <Button x:Name="OverlayCloseButton"
+                    AbsoluteLayout.LayoutBounds="0.5,0.95,50,50"
+                    AbsoluteLayout.LayoutFlags="PositionProportional"
+                    TextColor="White" Shadow="Black 0 0"
+                    BackgroundColor="Transparent"
+                    BorderColor="White"
+                    BorderWidth="3"
+                    WidthRequest="50"
+                    HeightRequest="50"
+                    CornerRadius="30">
+                <Button.ImageSource>
+                    <FontImageSource Glyph="&#xE711;" Size="Medium" Color="White" FontFamily="Segoe Fluent Icons"/>
+                </Button.ImageSource>
+            </Button>
+        </AbsoluteLayout>
+
         <!-- 点评表单模态框 -->
         <Border Padding="15" 
-            BackgroundColor="White"
+            BackgroundColor="{AppThemeBinding Light=White, Dark=#2D2D2D}"
             StrokeShape="{RoundRectangle CornerRadius=10}"
             IsVisible="{Binding CommentFormVisible}"
             Grid.Row="0"
@@ -576,10 +728,10 @@ CommandParameter="{Binding .}"/>
                     StrokeShape="{RoundRectangle CornerRadius=5}" 
                     Stroke="#E6E6E6" 
                     StrokeThickness="1"
-                    BackgroundColor="#F9F9F9">
+                    BackgroundColor="{AppThemeBinding Light=#F9F9F9, Dark=#1E1E1E}">
                     <Label Text="{Binding SelectedCommentTarget.Username, StringFormat='被点评者：{0}'}"
                        FontSize="13"
-                       TextColor="#666666"/>
+                       TextColor="{AppThemeBinding Light=#666666, Dark=#B0B0B0}"/>
                 </Border>
 
                 <!-- 点评内容输入框 -->
@@ -587,16 +739,17 @@ CommandParameter="{Binding .}"/>
                     <Label Text="请输入点评内容:" 
                        FontSize="13" 
                        FontAttributes="Bold"
-                       TextColor="#333333"/>
+                       TextColor="{AppThemeBinding Light=#333333, Dark=White}"/>
                     <Editor Placeholder="请输入点评内容（最多200字）"
                        Text="{Binding CommentText}"
                        FontSize="12"
-                       BackgroundColor="#F5F5F5"
+                       BackgroundColor="{AppThemeBinding Light=#F5F5F5, Dark=#3D3D3D}"
+                       TextColor="{AppThemeBinding Light=Black, Dark=White}"
                        HeightRequest="120"
                        MaxLength="200"/>
                     <Label Text="{Binding CommentText.Length, StringFormat='{0:D}/200'}"
                        FontSize="10"
-                       TextColor="#999999"
+                       TextColor="{AppThemeBinding Light=#999999, Dark=#B0B0B0}"
                        HorizontalTextAlignment="End"/>
                 </VerticalStackLayout>
 
@@ -627,15 +780,14 @@ CommandParameter="{Binding .}"/>
 
         <!-- 评分表单模态框 -->
         <Border Padding="15" 
-            BackgroundColor="White"
+            BackgroundColor="{AppThemeBinding Light=White, Dark=#2D2D2D}"
             StrokeShape="{RoundRectangle CornerRadius=10}"
             IsVisible="{Binding RatingFormVisible}"
             Grid.Row="0"
             Grid.RowSpan="2"
             VerticalOptions="Center"
             HorizontalOptions="Center"
-            WidthRequest="320"
-            Margin="20">
+            WidthRequest="320">
             <VerticalStackLayout Spacing="15">
                 <!-- 标题 -->
                 <Label Text="给帖子评分" 
@@ -649,16 +801,16 @@ CommandParameter="{Binding .}"/>
                     StrokeShape="{RoundRectangle CornerRadius=5}" 
                     Stroke="#E6E6E6" 
                     StrokeThickness="1"
-                    BackgroundColor="#F9F9F9">
+                    BackgroundColor="{AppThemeBinding Light=#F9F9F9, Dark=#1E1E1E}">
                     <Label Text="{Binding SelectedReply.Username, StringFormat='评分对象：{0}'}"
                        FontSize="13"
-                       TextColor="#666666"/>
+                       TextColor="{AppThemeBinding Light=#666666, Dark=#B0B0B0}"/>
                 </Border>
 
                 <!-- 评分范围信息 -->
                 <Label Text="{Binding DailyRemaining, StringFormat='今日剩余评分次数：{0}'}"
                    FontSize="12"
-                   TextColor="#999999"
+                   TextColor="{AppThemeBinding Light=#999999, Dark=#B0B0B0}"
                    HorizontalTextAlignment="Center"/>
 
                 <!-- 评分分数选择器 -->
@@ -666,12 +818,12 @@ CommandParameter="{Binding .}"/>
                     <Label Text="请输入评分（显示可评分范围）:" 
                        FontSize="13" 
                        FontAttributes="Bold"
-                       TextColor="#333333"/>
+                       TextColor="{AppThemeBinding Light=#333333, Dark=White}"/>
 
                     <!-- 显示可评分范围 -->
                     <Label Text="{Binding RatingRangeDisplay}"
                            FontSize="12"
-                           TextColor="#666666"
+                           TextColor="{AppThemeBinding Light=#666666, Dark=#B0B0B0}"
                            HorizontalTextAlignment="Center"/>
 
                     <!-- 评分输入框 -->
@@ -680,7 +832,8 @@ CommandParameter="{Binding .}"/>
                            Keyboard="Numeric"
                            FontSize="14"
                            HorizontalTextAlignment="Center"
-                           BackgroundColor="#F5F5F5"
+                           BackgroundColor="{AppThemeBinding Light=#F5F5F5, Dark=#3D3D3D}"
+                           TextColor="{AppThemeBinding Light=Black, Dark=White}"
                            Margin="20,0"/>
 
                     <!-- 当前输入显示 -->
@@ -696,16 +849,17 @@ CommandParameter="{Binding .}"/>
                     <Label Text="评分理由（可选）:" 
                        FontSize="13" 
                        FontAttributes="Bold"
-                       TextColor="#333333"/>
+                       TextColor="{AppThemeBinding Light=#333333, Dark=White}"/>
                     <Entry Placeholder="请输入评分理由（最多200字）"
                        Text="{Binding RatingReason}"
                        MaxLength="200"
                        FontSize="12"
-                       BackgroundColor="#F5F5F5"
+                       BackgroundColor="{AppThemeBinding Light=#F5F5F5, Dark=#3D3D3D}"
+                       TextColor="{AppThemeBinding Light=Black, Dark=White}"
                        PlaceholderColor="#CCCCCC"/>
                     <Label Text="{Binding RatingReason.Length, StringFormat='{0:D}/200'}"
                        FontSize="10"
-                       TextColor="#999999"
+                       TextColor="{AppThemeBinding Light=#999999, Dark=#B0B0B0}"
                        HorizontalTextAlignment="End"/>
                 </VerticalStackLayout>
 
@@ -734,43 +888,57 @@ CommandParameter="{Binding .}"/>
             </VerticalStackLayout>
         </Border>
 
-        <Grid ColumnDefinitions="*,*,*,*,*" ColumnSpacing="0" IsVisible="{Binding HasContent}" Grid.Row="1">
-            <!-- 上一页按钮 -->
-            <Button Text="上一页" 
-                        IsEnabled="{Binding CanGoToPreviousPage}"
-                        Command="{Binding PreviousPageCommand}"
-                    Style="{StaticResource BottomNaviButtonStyle}" Margin="2,0" VerticalOptions="End"  />
+        <Grid ColumnDefinitions="*,*,*,*,*"  BackgroundColor="{AppThemeBinding Light=#F6F8FC, Dark=#202938}" Padding="0,5" IsVisible="{Binding HasContent}" Grid.Row="1">
+            <StackLayout VerticalOptions="End">
+                <Button IsEnabled="{Binding CanGoToPreviousPage}" Command="{Binding PreviousPageCommand}" Style="{StaticResource BottomNaviButtonStyle}">
+                    <Button.ImageSource>
+                        <FontImageSource Glyph="&#xE760;" Size="Large" Color="{AppThemeBinding Light=Black, Dark=White}" FontFamily="Segoe Fluent Icons"/>
+                    </Button.ImageSource>
+                </Button>
+                <Label Text="上一页" HorizontalOptions="Center" FontSize="12" TextColor="{AppThemeBinding Light=Black, Dark=White}"/>
+            </StackLayout>
+            <StackLayout VerticalOptions="End" Grid.Column="1">
+                <Button Command="{Binding RateThreadAuthorCommand}" Style="{StaticResource BottomNaviButtonStyle}">
+                    <Button.ImageSource>
+                        <FontImageSource Glyph="&#xE734;" Size="Medium" Color="{AppThemeBinding Light=Black, Dark=White}" FontFamily="Segoe Fluent Icons"/>
+                    </Button.ImageSource>
+                </Button>
+                <Label Text="评分" HorizontalOptions="Center" FontSize="12" TextColor="{AppThemeBinding Light=Black, Dark=White}"/>
+            </StackLayout>
 
-            <!-- 点赞/评分楼主按钮 -->
-            <Button Text="评分" 
-                        Grid.Column="1"
-                        Style="{StaticResource BottomNaviButtonStyle}" 
-                        Margin="2,0" 
-                        VerticalOptions="End"
-                        Command="{Binding RateThreadAuthorCommand}"/>
-            
-            <!-- 编辑按钮（仅当可编辑时显示） -->
-            <Button Text="编辑" 
-                        Grid.Column="2"
-                        Style="{StaticResource BottomNaviButtonStyle}" 
-                        Margin="2,0" 
-                        VerticalOptions="End"
-                        IsVisible="{Binding CanEditOp}"
-                        Command="{Binding OpenEditOpReplyCommand}"/>
+            <StackLayout Orientation="Horizontal" HorizontalOptions="Center" Grid.Column="2">
+                <Label Text="当前第"/>
+                <Label Text="{Binding CurrentPage}"/>
+                <Label Text="页，共"/>
+                <Label Text="{Binding TotalPage}"/>
+                <Label Text="页"/>
+            </StackLayout>
 
-            <!-- 回复按钮 -->
-            <Button Text="回复" 
-                        Grid.Column="3" 
-                        Style="{StaticResource BottomNaviButtonStyle}" 
-                        Margin="2,0" 
-                        VerticalOptions="End"
-                        Command="{Binding OpenReplyThreadCommand}" />
+            <StackLayout VerticalOptions="End" Grid.Column="2">
+                <Button IsVisible="{Binding CanEditOp}" Command="{Binding OpenEditOpReplyCommand}" Style="{StaticResource BottomNaviButtonStyle}">
+                    <Button.ImageSource>
+                        <FontImageSource Glyph="&#xE70f;" Size="Medium" Color="{AppThemeBinding Light=Black, Dark=White}" FontFamily="Segoe Fluent Icons"/>
+                    </Button.ImageSource>
+                </Button>
+                <Label Text="编辑" HorizontalOptions="Center" FontSize="12" IsVisible="{Binding CanEditOp}" TextColor="{AppThemeBinding Light=Black, Dark=White}"/>
+            </StackLayout>
 
-            <!-- 下一页按钮 -->
-            <Button Text="下一页" 
-                        IsEnabled="{Binding CanGoToNextPage}"
-                        Command="{Binding NextPageCommand}"
-                        Grid.Column="4" Style="{StaticResource BottomNaviButtonStyle}" Margin="2,0" VerticalOptions="End"  />
+            <StackLayout VerticalOptions="End" Grid.Column="3">
+                <Button Command="{Binding OpenReplyThreadCommand}" Style="{StaticResource BottomNaviButtonStyle}" >
+                    <Button.ImageSource>
+                        <FontImageSource Glyph="&#xE90a;" Size="Medium" Color="{AppThemeBinding Light=Black, Dark=White}" FontFamily="Segoe Fluent Icons"/>
+                    </Button.ImageSource>
+                </Button>
+                <Label Text="回复" HorizontalOptions="Center" FontSize="12" TextColor="{AppThemeBinding Light=Black, Dark=White}"/>
+            </StackLayout>
+            <StackLayout VerticalOptions="End" Grid.Column="4">
+                <Button IsEnabled="{Binding CanGoToNextPage}" Command="{Binding NextPageCommand}" Style="{StaticResource BottomNaviButtonStyle}" >
+                    <Button.ImageSource>
+                        <FontImageSource Glyph="&#xE761;" Size="Large" Color="{AppThemeBinding Light=Black, Dark=White}" FontFamily="Segoe Fluent Icons"/>
+                    </Button.ImageSource>
+                </Button>
+                <Label Text="下一页" HorizontalOptions="Center" FontSize="12" TextColor="{AppThemeBinding Light=Black, Dark=White}"/>
+            </StackLayout>
         </Grid>
     </Grid>
 </ContentPage>

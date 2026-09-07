@@ -1,4 +1,7 @@
 using Microsoft.Maui.Controls;
+using Microsoft.Maui.ApplicationModel;
+using CommunityToolkit.Maui.Views;
+using PCBetaMAUI.Controls;
 using PCBetaMAUI.Models;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -16,7 +19,7 @@ public static class ContentElementRenderer
     /// 将 ContentElements 列表渲染为 MAUI 控件，添加到指定的布局容器中
     /// 支持按 HorizontalGroupId 分组的横向排列（来自 ignore_js_op 标签的文本元素）
     /// </summary>
-    public static void RenderContentElements(VerticalStackLayout container, List<ContentElement>? elements, string? referer = null)
+    public static void RenderContentElements(VerticalStackLayout container, List<ContentElement>? elements, string? referer = null, ScrollView? ownerScrollView = null, bool enableImageVirtualization = false)
     {
         if (container == null || elements == null || elements.Count == 0)
             return;
@@ -73,8 +76,8 @@ public static class ContentElementRenderer
                 {
                     var groupElement = elements[groupElementIndex];
                     Debug.WriteLine($"  └─ 添加分组内的元素 {groupElementIndex}: {groupElement.FileName}");
-                    //  修复：传入 referer 参数
-                    var view = ConvertElementToView(groupElement, isHorizontal: true, referer);
+                    //  修复：传入 referer 参数并传入滚动容器及虚拟化标识
+                    var view = ConvertElementToView(groupElement, isHorizontal: true, referer, ownerScrollView, enableImageVirtualization);
                     if (view != null)
                     {
                         currentHorizontalLayout.Add(view);
@@ -89,7 +92,7 @@ public static class ContentElementRenderer
                 Debug.WriteLine($"✅ 直接添加元素到容器: {element.FileName}");
                 currentHorizontalLayout = null;
                 //  修复：传入 referer 参数
-                var view = ConvertElementToView(element, isHorizontal: false, referer);
+                var view = ConvertElementToView(element, isHorizontal: false, referer, ownerScrollView, enableImageVirtualization);
                 if (view != null)
                 {
                     container.Add(view);
@@ -106,7 +109,7 @@ public static class ContentElementRenderer
     /// 将单个 ContentElement 转换为对应的 View
     ///  修复：添加 referer 参数，用于文件下载
     /// </summary>
-    private static View? ConvertElementToView(ContentElement element, bool isHorizontal = false, string? referer = null)
+    private static View? ConvertElementToView(ContentElement element, bool isHorizontal = false, string? referer = null, ScrollView? ownerScrollView = null, bool enableImageVirtualization = false)
     {
         return element.Type switch
         {
@@ -114,7 +117,7 @@ public static class ContentElementRenderer
             ContentElementType.Bold => CreateBoldLabel(element, isHorizontal),
             ContentElementType.Italic => CreateItalicLabel(element, isHorizontal),
             ContentElementType.Link => CreateLinkLabel(element),
-            ContentElementType.Image => CreateImageView(element),
+            ContentElementType.Image => CreateImageView(element, ownerScrollView, enableImageVirtualization),
             ContentElementType.Attachment => CreateAttachmentButton(element, referer),
             ContentElementType.Emoji => CreateEmojiImage(element),
             ContentElementType.Code => CreateCodeBlock(element, isHorizontal),
@@ -131,6 +134,7 @@ public static class ContentElementRenderer
     /// <summary>
     /// 创建普通文本标签
     ///  改进：支持文本换行，避免被遮挡
+    ///  新增：支持暗色模式
     /// </summary>
     private static Label CreateTextLabel(ContentElement element, bool isHorizontal = false)
     {
@@ -144,6 +148,10 @@ public static class ContentElementRenderer
             VerticalOptions = isHorizontal ? LayoutOptions.Center : LayoutOptions.Start,
             //  改进：添加水平自动换行
             HorizontalOptions = LayoutOptions.Fill,
+            //  新增：支持暗色模式
+            TextColor = Application.Current?.RequestedTheme == AppTheme.Dark 
+                ? Colors.White 
+                : Colors.Black,
         };
 
         //  改进：根据情景设置合理的宽度
@@ -159,6 +167,7 @@ public static class ContentElementRenderer
     /// <summary>
     /// 创建粗体文本标签
     ///  改进：支持文本换行
+    ///  新增：支持暗色模式
     /// </summary>
     private static Label CreateBoldLabel(ContentElement element, bool isHorizontal = false)
     {
@@ -173,6 +182,10 @@ public static class ContentElementRenderer
             VerticalOptions = isHorizontal ? LayoutOptions.Center : LayoutOptions.Start,
             //  改进：添加水平自动换行
             HorizontalOptions = LayoutOptions.Fill,
+            //  新增：支持暗色模式
+            TextColor = Application.Current?.RequestedTheme == AppTheme.Dark 
+                ? Colors.White 
+                : Colors.Black,
         };
 
         //  改进：根据情景设置合理的宽度
@@ -187,6 +200,7 @@ public static class ContentElementRenderer
     /// <summary>
     /// 创建斜体文本标签
     ///  改进：支持文本换行
+    ///  新增：支持暗色模式
     /// </summary>
     private static Label CreateItalicLabel(ContentElement element, bool isHorizontal = false)
     {
@@ -201,6 +215,10 @@ public static class ContentElementRenderer
             VerticalOptions = isHorizontal ? LayoutOptions.Center : LayoutOptions.Start,
             //  改进：添加水平自动换行
             HorizontalOptions = LayoutOptions.Fill,
+            //  新增：支持暗色模式
+            TextColor = Application.Current?.RequestedTheme == AppTheme.Dark 
+                ? Colors.White 
+                : Colors.Black,
         };
 
         //  改进：根据情景设置合理的宽度
@@ -239,7 +257,7 @@ public static class ContentElementRenderer
     /// <summary>
     /// 创建图片视图（支持点击下载）
     /// </summary>
-    private static View CreateImageView(ContentElement element)
+    private static View CreateImageView(ContentElement element, ScrollView? ownerScrollView = null, bool enableImageVirtualization = false)
     {
         if (string.IsNullOrEmpty(element.Url))
         {
@@ -256,42 +274,79 @@ public static class ContentElementRenderer
                 return new Label { Text = "[图片 URL 无效]" };
             }
 
+            // 如果是 GIF，则在 Android 上使用 GifImageView（尝试原生 GifDrawable），其它平台回退为普通 Image
+            bool isGif = uri.AbsolutePath.EndsWith(".gif", StringComparison.OrdinalIgnoreCase) ||
+                         element.FileName?.EndsWith(".gif", StringComparison.OrdinalIgnoreCase) == true;
+
+            if (isGif && DeviceInfo.Platform == DevicePlatform.Android)
+            {
+                var gifView = new GifImageView(element.Url, element.ImageWidth, element.ImageHeight);
+
+                // 点击预览：在 Android 上使用 ShowGif
+                var tapGestureGif = new TapGestureRecognizer();
+                tapGestureGif.Tapped += (s, e) => PCBetaMAUI.Services.ImageOverlayManager.ShowGif(element.Url);
+                gifView.GestureRecognizers.Add(tapGestureGif);
+
+                // 如果启用了虚拟化并且提供了滚动容器，则包装 VirtualizingImageView 的占位逻辑
+                if (enableImageVirtualization && ownerScrollView != null)
+                {
+                    double reservedHeight = element.ImageHeight > 0 ? element.ImageHeight : 200;
+                    // 使用内部的 fallback image 来虚拟化：创建一个 Image 占位并传入 VirtualizingImageView
+                    var placeholderImg = new Image { Aspect = Aspect.AspectFit };
+                    placeholderImg.WidthRequest = element.ImageWidth > 0 ? Math.Min(element.ImageWidth, 300) : -1;
+                    _ = LoadImageAsync(placeholderImg, element.Url);
+                    return new VirtualizingImageView(placeholderImg, reservedHeight, ownerScrollView);
+                }
+
+                return gifView;
+            }
+
             var image = new Image
             {
-                Source = ImageSource.FromUri(uri),
                 Aspect = Aspect.AspectFit,
                 Margin = new Thickness(0, 10),
             };
 
             // 如果指定了宽度和高度
-            if (element.ImageWidth > 0 && element.ImageHeight > 0)
+            if (element.ImageWidth > 0)
             {
                 image.WidthRequest = Math.Min(element.ImageWidth, 300); // 最大宽度 300
-                image.HeightRequest = element.ImageHeight * (element.ImageWidth <= 300 ? element.ImageWidth / 300 : 1);
+                if (element.ImageHeight > 0)
+                    image.HeightRequest = element.ImageHeight * (element.ImageWidth <= 300 ? element.ImageWidth / 300 : 1);
             }
 
-            // 添加点击手势用于下载图片
+            // 添加点击手势：显示全屏图片查看器（使用 CommunityToolkit Popup，避免页面导航导致的生命周期重载）
             var tapGesture = new TapGestureRecognizer();
-            tapGesture.Tapped += async (s, e) => 
+            tapGesture.Tapped += async (s, e) =>
             {
-                var mainPage = Application.Current?.Windows[0].Page;
-
-            if (mainPage != null)
-            {
-                var result = await mainPage.DisplayAlertAsync(
-                    "保存图片", 
-                    "是否保存此图片？", 
-                    "保存", "取消");
-
-                if (result)
+                try
                 {
-                    var downloadService = new FileDownloadService();
-                    await downloadService.DownloadAndSaveFileAsync(element.Url, element.Title);
+                    if (isGif && DeviceInfo.Platform == DevicePlatform.Android)
+                    {
+                        PCBetaMAUI.Services.ImageOverlayManager.ShowGif(element.Url);
+                    }
+                    else
+                    {
+                        PCBetaMAUI.Services.ImageOverlayManager.Show(image.Source, element.Url);
+                    }
                 }
-            }
-                };
-                image.GestureRecognizers.Add(tapGesture);
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"❌ 打开图片弹窗失败: {ex.Message}");
+                }
+            };
+            image.GestureRecognizers.Add(tapGesture);
 
+                // 如果启用了图片虚拟化并且提供了滚动容器，则创建一个占位容器用于按需显示/隐藏图片，且不改变布局高度
+                if (enableImageVirtualization && ownerScrollView != null)
+                {
+                    // 使用已知图片高度（如果有）作为保留高度，否则使用默认值
+                    double reservedHeight = element.ImageHeight > 0 ? element.ImageHeight : 200;
+                    _ = LoadImageAsync(image, element.Url);
+                    return new VirtualizingImageView(image, reservedHeight, ownerScrollView);
+                }
+
+                _ = LoadImageAsync(image, element.Url);
                 return image;
             }
             catch (Exception ex)
@@ -301,20 +356,196 @@ public static class ContentElementRenderer
             }
         }
 
+    private static async Task LoadImageAsync(Image image, string imageUrl)
+    {
+        try
+        {
+            Debug.WriteLine($"🖼️ 开始下载帖子图片/表情: {imageUrl}");
+            var imageBytes = await HttpClientManager.Instance.GetByteArrayAsync(imageUrl);
+            Debug.WriteLine($"🖼️ 帖子图片/表情下载完成: {imageUrl}, 长度={imageBytes.Length} bytes, 文件头={GetImageSignature(imageBytes)}");
+            if (imageBytes.Length == 0)
+            {
+                Debug.WriteLine($"⚠️ 图片响应为空: {imageUrl}");
+                return;
+            }
+
+            await MainThread.InvokeOnMainThreadAsync(() =>
+            {
+                image.Source = ImageSource.FromStream(() =>
+                    new System.IO.MemoryStream(imageBytes, writable: false));
+            });
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"❌ 网络图片/表情加载失败: {imageUrl}");
+            Debug.WriteLine($"   异常类型: {ex.GetType().FullName}");
+            Debug.WriteLine($"   异常信息: {ex.Message}");
+            Debug.WriteLine($"   InnerException: {ex.InnerException?.Message ?? "无"}");
+        }
+    }
+
+    private static string GetImageSignature(byte[] imageBytes)
+    {
+        if (imageBytes.Length == 0)
+        {
+            return "<空>";
+        }
+
+        var length = Math.Min(imageBytes.Length, 12);
+        return string.Join(" ", imageBytes.Take(length).Select(value => value.ToString("X2")));
+    }
+
+    /// <summary>
+    /// 简单的虚拟化图片容器：保持占位高度不变，通过监听 ScrollView 的 Scrolled 事件在视口外隐藏图片以释放内存（只是隐藏图片内容，不移除容器）
+    /// 注意：此实现对 Android 使用原生可见性检测以提高准确性；其他平台退回到简单的测量比较。
+    /// </summary>
+    private class VirtualizingImageView : ContentView
+    {
+        private readonly Image _image;
+        private readonly View _placeholder;
+        private readonly ScrollView _ownerScrollView;
+        private readonly double _reservedHeight;
+
+        public VirtualizingImageView(Image image, double reservedHeight, ScrollView ownerScrollView)
+        {
+            _image = image;
+            _reservedHeight = reservedHeight;
+            _ownerScrollView = ownerScrollView;
+
+            HeightRequest = _reservedHeight;
+            // 占位视图保留空间，不可见但占位
+            _placeholder = new BoxView { BackgroundColor = Colors.Transparent, HeightRequest = _reservedHeight };
+
+            // 初始：显示图片，隐藏占位
+            _image.IsVisible = true;
+            _placeholder.IsVisible = false;
+
+            var grid = new Grid();
+            grid.Add(_placeholder);
+            grid.Add(_image);
+            Content = grid;
+
+            // 订阅滚动事件
+            _ownerScrollView.Scrolled += OwnerScrollView_Scrolled;
+
+            // 也在大小变化时检查一次
+            SizeChanged += (s, e) => CheckVisibility();
+
+            // 延迟首次检查，等布局完成
+            MainThread.BeginInvokeOnMainThread(async () =>
+            {
+                await Task.Delay(60);
+                CheckVisibility();
+            });
+        }
+
+        private void OwnerScrollView_Scrolled(object? sender, ScrolledEventArgs e)
+        {
+            CheckVisibility();
+        }
+
+        private void CheckVisibility()
+        {
+            try
+            {
+                // 如果没有 handler，等下一次
+                if (Handler == null)
+                    return;
+
+#if ANDROID
+                var nativeView = Handler.PlatformView as Android.Views.View;
+                if (nativeView != null)
+                {
+                    var rect = new Android.Graphics.Rect();
+                    bool visible = nativeView.GetGlobalVisibleRect(rect);
+                    // 如果在屏幕上可见区域高度为0，视为不可见
+                    bool isVisibleOnScreen = visible && rect.Height() > 0;
+                    ToggleImageVisibility(isVisibleOnScreen);
+                    return;
+                }
+#endif
+
+                // 跨平台回退：基于父滚动位置和自身相对位置的简单判断
+                if (_ownerScrollView.Content is Layout contentLayout)
+                {
+                    double y = 0;
+                    // 计算自身在 contentLayout 内的大致 Y 值
+                    foreach (var child in contentLayout.Children)
+                    {
+                        if (child == this)
+                            break;
+                        y += child.Height;
+                    }
+
+                    double scrollY = _ownerScrollView.ScrollY;
+                    double viewportTop = scrollY;
+                    double viewportBottom = scrollY + _ownerScrollView.Height;
+
+                    double elementTop = y;
+                    double elementBottom = y + _reservedHeight;
+
+                    bool intersects = !(elementBottom < viewportTop || elementTop > viewportBottom);
+                    ToggleImageVisibility(intersects);
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"❌ VirtualizingImageView CheckVisibility 错误: {ex.Message}");
+            }
+        }
+
+        private void ToggleImageVisibility(bool show)
+        {
+            // 当图片需要隐藏时，隐藏 _image 并显示占位，反之则加载图片并显示
+            if (show)
+            {
+                if (!_image.IsVisible)
+                {
+                    _placeholder.IsVisible = false;
+                    _image.IsVisible = true;
+                }
+            }
+            else
+            {
+                if (_image.IsVisible)
+                {
+                    // 隐藏图片，但保留占位空间
+                    _image.IsVisible = false;
+                    _placeholder.IsVisible = true;
+                }
+            }
+        }
+
+        protected override void OnParentSet()
+        {
+            base.OnParentSet();
+            if (Parent == null)
+            {
+                try
+                {
+                    _ownerScrollView.Scrolled -= OwnerScrollView_Scrolled;
+                }
+                catch { }
+            }
+        }
+    }
+
     /// <summary>
     /// 创建附件块 - 显示完整的附件信息（文件名、大小、下载次数、上传时间）
     ///  增强：显示完整的附件元数据
     ///  修复：现在支持传入 Referer，确保下载时使用正确的来源页面
     ///  改进：添加加载动画，下载时禁用按钮并显示旋转的加载指示器
     ///  新增：支持付费附件购买功能
+    ///  新增：支持暗色模式
     /// </summary>
     private static View CreateAttachmentButton(ContentElement element, string? referer = null)
     {
+        var isDarkMode = Application.Current?.RequestedTheme == AppTheme.Dark;
         var attachmentContainer = new VerticalStackLayout
         {
             Margin = new Thickness(0, 10),
             Padding = new Thickness(12),
-            BackgroundColor = Color.FromArgb("#F0F0F0"),
+            BackgroundColor = isDarkMode ? Color.FromArgb("#2D2D2D") : Color.FromArgb("#F0F0F0"),
             Spacing = 8
         };
 
@@ -333,6 +564,7 @@ public static class ContentElementRenderer
             FontSize = 14,
             FontAttributes = FontAttributes.Bold,
             VerticalOptions = LayoutOptions.Center,
+            TextColor = isDarkMode ? Colors.White : Colors.Black,
         };
         headerGrid.Add(fileName, 0, 0);
 
@@ -340,18 +572,25 @@ public static class ContentElementRenderer
         var isPaidAttachment = element.SalePrice.HasValue && element.SalePrice.Value > 0;
 
         // 按钮文本和颜色
-        var buttonText = isPaidAttachment ? $"购买({element.SalePrice})" : "下载";
-        var buttonColor = isPaidAttachment ? Color.FromArgb("#FF9800") : Colors.Blue; // 购买按钮用橙色
+        var buttonText = isPaidAttachment ? $"购买({element.SalePrice})" : string.Empty;
+        var buttonColor = isPaidAttachment ? Color.FromArgb("#FF9800") : Colors.DodgerBlue; // 购买按钮用橙色
 
         var actionButton = new Button
         {
             Text = buttonText,
+            ImageSource = isPaidAttachment ? null : new FontImageSource
+            {
+                Glyph = "\uE896",
+                Size = 20,
+                Color = Colors.White,
+                FontFamily = "Segoe Fluent Icons"
+            },
             BackgroundColor = buttonColor,
             TextColor = Colors.White,
             Padding = new Thickness(15, 5),
             FontSize = 11,
             CornerRadius = 5,
-            WidthRequest = isPaidAttachment ? 85 : 70,
+            WidthRequest = isPaidAttachment ? 85 : 50,
         };
 
         // 加载动画指示器（初始隐藏）
@@ -437,7 +676,7 @@ public static class ContentElementRenderer
             {
                 Text = $"💾 {element.FileSize}",
                 FontSize = 12,
-                TextColor = Colors.DarkGray,
+                TextColor = isDarkMode ? Color.FromArgb("#B0B0B0") : Colors.DarkGray,
             };
             infoStack.Add(fileSizeLabel);
         }
@@ -448,7 +687,7 @@ public static class ContentElementRenderer
             {
                 Text = $"⬇️ {element.DownloadCount}",
                 FontSize = 12,
-                TextColor = Colors.DarkGray,
+                TextColor = isDarkMode ? Color.FromArgb("#B0B0B0") : Colors.DarkGray,
             };
             infoStack.Add(downloadCountLabel);
         }
@@ -477,7 +716,7 @@ public static class ContentElementRenderer
             {
                 Text = $"⏰ {element.UploadTime}",
                 FontSize = 11,
-                TextColor = Colors.Gray,
+                TextColor = isDarkMode ? Color.FromArgb("#808080") : Colors.Gray,
             };
             attachmentContainer.Add(uploadTimeLabel);
         }
@@ -506,15 +745,16 @@ public static class ContentElementRenderer
 
         try
         {
-            // 尝试从 URL 加载表情图片
+            // 统一通过 HttpClientManager 下载表情图片，确保使用 Cookie 并输出完整诊断信息
             var image = new Image
             {
-                Source = ImageSource.FromUri(new Uri(element.Url)),
                 WidthRequest = 24,
                 HeightRequest = 24,
                 Aspect = Aspect.AspectFit,
                 Margin = new Thickness(2, 0),
             };
+
+            _ = LoadImageAsync(image, element.Url);
 
             return image;
         }
@@ -534,16 +774,18 @@ public static class ContentElementRenderer
 
     /// <summary>
     /// 创建代码块
+    ///  新增：支持暗色模式
     /// </summary>
     private static View CreateCodeBlock(ContentElement element, bool isHorizontal = false)
     {
+        var isDarkMode = Application.Current?.RequestedTheme == AppTheme.Dark;
         var frame = new Frame
         {
             BorderColor = Colors.Gray,
             CornerRadius = 8,
             Padding = new Thickness(12),
             Margin = new Thickness(0, 10),
-            BackgroundColor = Color.FromArgb("#F5F5F5"),
+            BackgroundColor = isDarkMode ? Color.FromArgb("#3D3D3D") : Color.FromArgb("#F5F5F5"),
         };
 
         var label = new Label
@@ -552,7 +794,7 @@ public static class ContentElementRenderer
             FontSize = isHorizontal ? 10 : 12,
             FontFamily = "Courier New",
             LineBreakMode = isHorizontal ? LineBreakMode.TailTruncation : LineBreakMode.CharacterWrap,
-            TextColor = Colors.Black,
+            TextColor = isDarkMode ? Colors.White : Colors.Black,
         };
 
         if (isHorizontal)
@@ -567,9 +809,11 @@ public static class ContentElementRenderer
     /// <summary>
     /// 创建引用块
     ///  修复：添加 Title 显示，显示引用者和时间信息
+    ///  新增：支持暗色模式
     /// </summary>
     private static View CreateQuoteBlock(ContentElement element, bool isHorizontal = false)
     {
+        var isDarkMode = Application.Current?.RequestedTheme == AppTheme.Dark;
         var outerContainer = new VerticalStackLayout
         {
             Spacing = 0,
@@ -588,7 +832,7 @@ public static class ContentElementRenderer
                 TextColor = Color.FromArgb("#666666"),
                 LineBreakMode = LineBreakMode.WordWrap,
                 Padding = new Thickness(isHorizontal ? 6 : 12, 8, isHorizontal ? 6 : 12, 4),
-                BackgroundColor = Color.FromArgb("#F0F0F0"),
+                BackgroundColor = isDarkMode ? Color.FromArgb("#2D2D2D") : Color.FromArgb("#F0F0F0"),
             };
 
             outerContainer.Add(titleLabel);
@@ -617,7 +861,7 @@ public static class ContentElementRenderer
             CornerRadius = 0,
             Padding = new Thickness(isHorizontal ? 6 : 12),
             Margin = new Thickness(0),
-            BackgroundColor = Color.FromArgb("#F9F9F9"),
+            BackgroundColor = isDarkMode ? Color.FromArgb("#1E1E1E") : Color.FromArgb("#F9F9F9"),
         };
 
         var label = new Label
@@ -625,7 +869,7 @@ public static class ContentElementRenderer
             Text = element.Text ?? string.Empty,
             FontSize = isHorizontal ? 10 : 13,
             LineBreakMode = isHorizontal ? LineBreakMode.TailTruncation : LineBreakMode.WordWrap,
-            TextColor = Colors.Gray,
+            TextColor = isDarkMode ? Color.FromArgb("#B0B0B0") : Colors.Gray,
         };
 
         if (isHorizontal)
@@ -800,9 +1044,11 @@ public static class ContentElementRenderer
     /// 新方法：直接处理 TableRow 元素
     /// TableRow.Children 包含多个 TableCell
     ///  改进：使用 Star GridLength 填满可用宽度，每列等宽
+    ///  新增：支持暗色模式
     /// </summary>
     private static View CreateTableRowView(ContentElement rowElement, int columnCount)
     {
+        var isDarkMode = Application.Current?.RequestedTheme == AppTheme.Dark;
         var grid = new Grid
         {
             ColumnSpacing = 1,
@@ -836,7 +1082,7 @@ public static class ContentElementRenderer
                     CornerRadius = 0,
                     Padding = new Thickness(8),
                     Margin = new Thickness(0),
-                    BackgroundColor = Colors.White,
+                    BackgroundColor = isDarkMode ? Color.FromArgb("#1E1E1E") : Colors.White,
                     //  让 Frame 填满分配的列宽
                     HorizontalOptions = LayoutOptions.Fill,
                 };

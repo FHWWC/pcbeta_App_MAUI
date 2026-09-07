@@ -2,6 +2,7 @@ using PCBetaMAUI.ViewModels;
 using PCBetaMAUI.Models;
 using PCBetaMAUI.Services;
 using System.Diagnostics;
+using Microsoft.Maui.Devices;
 
 namespace PCBetaMAUI.Views;
 
@@ -78,6 +79,28 @@ public partial class ThreadContentPage : ContentPage
         InitializeComponent();
     }
 
+    private void PollOption_CheckedChanged(object? sender, CheckedChangedEventArgs e)
+    {
+        if (!e.Value || sender is not CheckBox checkBox ||
+            BindingContext is not ThreadContentViewModel viewModel ||
+            viewModel.Poll is not PollInfo poll ||
+            checkBox.BindingContext is not PollOption selectedOption)
+            return;
+
+        if (!poll.IsMultiple)
+        {
+            foreach (var option in poll.Options)
+            {
+                if (!ReferenceEquals(option, selectedOption))
+                    option.IsSelected = false;
+            }
+        }
+        else if (poll.MaxChoices > 0 && poll.Options.Count(option => option.IsSelected) > poll.MaxChoices)
+        {
+            selectedOption.IsSelected = false;
+        }
+    }
+
     protected override async void OnAppearing()
     {
         base.OnAppearing();
@@ -93,11 +116,104 @@ public partial class ThreadContentPage : ContentPage
 
                 // 加载后渲染内容
                 RenderThreadContent();
+                // 监听 ViewModel 属性变更以便在翻页后自动滚动到回帖区域
+                _viewModel.PropertyChanged -= ViewModel_PropertyChanged;
+                _viewModel.PropertyChanged += ViewModel_PropertyChanged;
+                // 将短提示面板的初始状态设置为隐藏（确保 Opacity=0）
+                try
+                {
+                    var frame = this.FindByName<Border>("TransientMessageFrame");
+                    if (frame != null)
+                    {
+                        frame.Opacity = 0;
+                        frame.IsVisible = false;
+                    }
+                }
+                catch { }
             }
         }
         catch (Exception ex)
         {
             Debug.WriteLine($"❌ ThreadContentPage OnAppearing 错误: {ex.Message}");
+        }
+    }
+
+    private async void ViewModel_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        try
+        {
+            if (sender is ThreadContentViewModel vm)
+            {
+                // 当 CurrentPage 或 IsLoading 变化时检查是否需要滚动
+                if (e.PropertyName == nameof(vm.CurrentPage) || e.PropertyName == nameof(vm.IsLoading) || e.PropertyName == nameof(vm.ReplyList))
+                {
+                    // 如果加载完成且有回帖，则滚动到回帖区域
+                    if (!vm.IsLoading && vm.HasReplies && MainScrollView != null && RepliesBorder != null)
+                    {
+                        // 延迟微小时间以确保布局完成
+                        Device.BeginInvokeOnMainThread(async () =>
+                        {
+                            try
+                            {
+                                await Task.Delay(120);
+                                // Scroll to the top of the RepliesBorder
+                                await MainScrollView.ScrollToAsync(RepliesBorder, ScrollToPosition.Start, true);
+                                Debug.WriteLine($"🔽 已自动滚动到回帖区域（第 {vm.CurrentPage} 页）");
+                            }
+                            catch (Exception ex)
+                            {
+                                Debug.WriteLine($"❌ 自动滚动失败: {ex.Message}");
+                            }
+                        });
+                    }
+                }
+
+                // 监听短提示可见性变化，执行淡入淡出动画
+                if (e.PropertyName == nameof(vm.TransientMessageVisible))
+                {
+                    try
+                    {
+                        var frame = this.FindByName<Border>("TransientMessageFrame");
+                        if (frame == null)
+                            return;
+
+                        // 获取当前值
+                        bool visible = vm.TransientMessageVisible;
+
+                        // 在主线程执行动画
+                        await MainThread.InvokeOnMainThreadAsync(async () =>
+                        {
+                            try
+                            {
+                                if (visible)
+                                {
+                                    frame.IsVisible = true;
+                                    frame.Opacity = 0;
+                                    await frame.FadeTo(1, 250);
+                                }
+                                else
+                                {
+                                    // 若已经不可见则直接确保隐藏
+                                    await frame.FadeTo(0, 400);
+                                    frame.IsVisible = false;
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                Debug.WriteLine($"短提示动画失败: {ex.Message}");
+                            }
+                        });
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.WriteLine($"处理短提示变化出错: {ex.Message}");
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"❌ ViewModel_PropertyChanged 错误: {ex.Message}");
         }
     }
 
@@ -117,9 +233,10 @@ public partial class ThreadContentPage : ContentPage
 
             Debug.WriteLine($"🎨 开始渲染 {_viewModel.ContentElements.Count} 个内容元素");
 
-            //  关键修改：传入当前帖子URL作为Referer
+            //  关键修改：传入当前帖子URL作为Referer，并仅在 Android 平台启用图片虚拟化（节省内存，避免 UI 卡顿）
             string currentThreadUrl = $"https://bbs.pcbeta.com/forum.php?mod=viewthread&tid={_threadId}";
-            ContentElementRenderer.RenderContentElements(ContentContainer, _viewModel.ContentElements, currentThreadUrl);
+            bool enableImageVirtualization = DeviceInfo.Platform == DevicePlatform.Android;
+            ContentElementRenderer.RenderContentElements(ContentContainer, _viewModel.ContentElements, currentThreadUrl, MainScrollView, enableImageVirtualization: enableImageVirtualization);
 
             Debug.WriteLine($" 内容渲染完成，当前帖子URL: {currentThreadUrl}");
         }

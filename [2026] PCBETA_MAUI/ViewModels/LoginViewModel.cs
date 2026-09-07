@@ -151,7 +151,8 @@ public partial class LoginViewModel : ObservableObject
                             }
                             else
                             {
-                                appShell.UserAvatar.Source = avatarUrl;
+                                var imageSource = await ImageDataLoader.LoadAsync(avatarUrl);
+                                appShell.UserAvatar.Source = imageSource ?? ImageSource.FromFile("defalut_avatar_big.png");
                             }
                         }
                     }
@@ -242,7 +243,7 @@ public partial class LoginViewModel : ObservableObject
     /// Navigates to guest (non-login) access
     /// </summary>
     [RelayCommand]
-    public async Task GuestAccessAsync()
+    public async Task GuestAccess()
     {
         try
         {

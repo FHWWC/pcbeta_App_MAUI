@@ -27,6 +27,10 @@ public class PostNewThreadViewModel : INotifyPropertyChanged
     private int _characterCount;
     private int _threadTitleCharCount;
     private bool _isSubmitEnabled;
+    private string _formhash = string.Empty;
+    private string _uid = string.Empty;
+    private string _hash = string.Empty;
+
 
     // ✅ 新增：主题分类参数
     private string _selectedTypeId = "0";
@@ -265,6 +269,11 @@ public class PostNewThreadViewModel : INotifyPropertyChanged
                 return;
             }
 
+            // 从HTML中提取关键数据
+            _formhash = ExtractFormHashFromHtml(pageHtml);
+            _uid = ExtractUidFromHtml(pageHtml);
+            _hash = ExtractHashFromHtml(pageHtml);
+
             Debug.WriteLine($"✅ 成功获取发帖页面 HTML (大小: {pageHtml.Length} 字节)");
 
             // 解析 typeid 选项 - 发帖页面初始化时获取
@@ -328,10 +337,10 @@ public class PostNewThreadViewModel : INotifyPropertyChanged
             UploadedImages.Add(fileInfo);
 
             // 获取认证参数
-            var (formhash, uid, hash) = await GetAuthenticationParamsAsync();
+            //var (formhash, uid, hash) = await GetAuthenticationParamsAsync();
 
             // 上传文件
-            var uploadResult = await UploadFileAsync(fileResult.FullPath, isImage: true, uid, hash);
+            var uploadResult = await UploadFileAsync(fileResult.FullPath, isImage: true, _uid, _hash);
 
             if (uploadResult.HasValue)
             {
@@ -439,10 +448,10 @@ public class PostNewThreadViewModel : INotifyPropertyChanged
             UploadedAttachments.Add(fileInfo);
 
             // 获取认证参数
-            var (formhash, uid, hash) = await GetAuthenticationParamsAsync();
+            //var (formhash, uid, hash) = await GetAuthenticationParamsAsync();
 
             // 上传文件
-            var uploadResult = await UploadFileAsync(fileResult.FullPath, isImage: false, uid, hash);
+            var uploadResult = await UploadFileAsync(fileResult.FullPath, isImage: false, _uid, _hash);
 
             if (uploadResult.HasValue)
             {
@@ -602,16 +611,16 @@ public class PostNewThreadViewModel : INotifyPropertyChanged
             IsSubmitEnabled = false;
 
             // 获取认证参数
-            var (formhash, uid, hash) = await GetAuthenticationParamsAsync();
+            //var (formhash, uid, hash) = await GetAuthenticationParamsAsync();
 
-            if (string.IsNullOrEmpty(formhash))
+            if (string.IsNullOrEmpty(_formhash))
             {
                 await ShowErrorAlert("错误", "无法获取必要的认证参数，请重试");
                 IsSubmitEnabled = true;
                 return;
             }
 
-            Debug.WriteLine($"✅ 获取到认证参数: formhash={formhash.Substring(0, Math.Min(8, formhash.Length))}...");
+            Debug.WriteLine($"✅ 获取到认证参数: formhash={_formhash.Substring(0, Math.Min(8, _formhash.Length))}...");
 
             // 构建附件元数据列表
             var attachmentMetadataList = BuildAttachmentMetadataList();
@@ -622,7 +631,7 @@ public class PostNewThreadViewModel : INotifyPropertyChanged
                 _boardId,
                 ThreadTitle,
                 PostContent,
-                formhash,
+                _formhash,
                 attachmentMetadataList,
                 // ✅ 新增：10个额外参数
                 ReplycreditTimes,
@@ -648,32 +657,34 @@ public class PostNewThreadViewModel : INotifyPropertyChanged
                 // 导航返回
                 await GoBackAsync();
 
-                // 等待导航完成
-                await Task.Delay(1000);
+                /*
+                                 // 等待导航完成
+                                await Task.Delay(1000);
 
-                // 尝试刷新前一个页面（ThreadListPage）
-                try
-                {
-                    // 从导航栈获取当前页面
-                    var navStack = Shell.Current?.Navigation.NavigationStack;
-                    if (navStack != null && navStack.Count > 0)
-                    {
-                        var currentPage = navStack.LastOrDefault();
+                                // 尝试刷新前一个页面（ThreadListPage）
+                                try
+                                {
+                                    // 从导航栈获取当前页面
+                                    var navStack = Shell.Current?.Navigation.NavigationStack;
+                                    if (navStack != null && navStack.Count > 0)
+                                    {
+                                        var currentPage = navStack.LastOrDefault();
 
-                        // 尝试获取 ViewModel 并刷新
-                        if (currentPage?.BindingContext is ThreadListViewModel tlvm)
-                        {
-                            Debug.WriteLine($"🔄 调用 ThreadListViewModel.LoadThreadsAsync() 刷新页面");
-                            await tlvm.LoadThreadsAsync();
-                            Debug.WriteLine($"✅ 刷新完成");
-                        }
-                    }
-                }
-                catch (Exception refreshEx)
-                {
-                    Debug.WriteLine($"⚠️ 刷新前一个页面失败: {refreshEx.Message}");
-                    // 刷新失败不影响用户体验，只记录日志
-                }
+                                        // 尝试获取 ViewModel 并刷新
+                                        if (currentPage?.BindingContext is ThreadListViewModel tlvm)
+                                        {
+                                            Debug.WriteLine($"🔄 调用 ThreadListViewModel.LoadThreadsAsync() 刷新页面");
+                                            await tlvm.LoadThreadsAsync();
+                                            Debug.WriteLine($"✅ 刷新完成");
+                                        }
+                                    }
+                                }
+                                catch (Exception refreshEx)
+                                {
+                                    Debug.WriteLine($"⚠️ 刷新前一个页面失败: {refreshEx.Message}");
+                                    // 刷新失败不影响用户体验，只记录日志
+                                }
+                 */
             }
             else
             {
@@ -778,9 +789,9 @@ public class PostNewThreadViewModel : INotifyPropertyChanged
         try
         {
             // 动态获取 formhash
-            var (formhash, _, _) = await GetAuthenticationParamsAsync();
+            //var (formhash, _, _) = await GetAuthenticationParamsAsync();
 
-            var deleteUrl = $"https://bbs.pcbeta.com/forum.php?mod=ajax&action=deleteattach&inajax=yes&aids[]={attachmentId}&fid={_boardId}&formhash={formhash}";
+            var deleteUrl = $"https://bbs.pcbeta.com/forum.php?mod=ajax&action=deleteattach&inajax=yes&aids[]={attachmentId}&fid={_boardId}&formhash={_formhash}";
 
             await _apiService.DeleteAttachmentAsync(deleteUrl);
             Debug.WriteLine($"✅ 服务器删除附件: aid={attachmentId}");

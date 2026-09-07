@@ -1,0 +1,209 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:PCBetaMAUI.ViewModels"
+             xmlns:conv="clr-namespace:PCBetaMAUI.Converters"
+             x:Class="PCBetaMAUI.Views.MyPostPage"
+             Title="我发布的"
+             BackgroundColor="{AppThemeBinding Light=White, Dark=#1E1E1E}">
+
+    <ContentPage.Resources>
+        <ResourceDictionary>
+            <conv:SelectedFilterToBackgroundConverter x:Key="SelectedFilterToBackgroundConverter" />
+            <conv:ContentTypeToBackgroundConverter x:Key="ContentTypeToBackgroundConverter" />
+<!--
+                        <conv:SelectedFilterToTextColorConverter x:Key="SelectedFilterToTextColorConverter" />
+            -->
+            <Style x:Key="BottomNaviButtonStyle" TargetType="Button">
+                <Setter Property="BackgroundColor" Value="Transparent"/>
+                <Setter Property="TextColor" Value="{AppThemeBinding Light=Black, Dark=White}"/>
+                <Setter Property="CornerRadius" Value="50"/>
+                <Setter Property="BorderWidth" Value="2"/>
+                <Setter Property="BorderColor" Value="LightBlue"/>
+                <Setter Property="Padding" Value="0"/>
+                <Setter Property="HeightRequest" Value="50"/>
+                <Setter Property="WidthRequest" Value="50"/>
+                <!--
+                                <Setter Property="VisualStateManager.VisualStateGroups">
+                    <VisualStateGroupList>
+                        <VisualStateGroup Name="CommonStates">
+                            <VisualState Name="Normal">
+                                <VisualState.Setters>
+                                    <Setter Property="BackgroundColor" Value="DodgerBlue"/>
+                                </VisualState.Setters>
+                            </VisualState>
+                            <VisualState Name="PointerOver">
+                                <VisualState.Setters>
+                                    <Setter Property="BackgroundColor" Value="SkyBlue"/>
+                                </VisualState.Setters>
+                            </VisualState>
+                            <VisualState Name="Pressed">
+                                <VisualState.Setters>
+                                    <Setter Property="BackgroundColor" Value="LightBlue"/>
+                                </VisualState.Setters>
+                            </VisualState>
+                        </VisualStateGroup>
+                    </VisualStateGroupList>
+                </Setter>
+                -->
+            </Style>
+            <Style x:Key="ThreadTypeButtonStyle" TargetType="Button">
+                <Setter Property="BackgroundColor" Value="Transparent"/>
+                <Setter Property="TextColor" Value="{AppThemeBinding Light=Black, Dark=White}"/>
+                <Setter Property="BorderColor" Value="LightSkyBlue"/>
+                <Setter Property="BorderWidth" Value="1.5"/>
+                <Setter Property="CornerRadius" Value="8"/>
+                <Setter Property="Margin" Value="2,0"/>
+            </Style>
+            <Style x:Key="ReplyTypeButtonStyle" TargetType="Button">
+                <Setter Property="BackgroundColor" Value="Transparent"/>
+                <Setter Property="TextColor" Value="{AppThemeBinding Light=Black, Dark=White}"/>
+                <Setter Property="BorderColor" Value="LightSkyBlue"/>
+                <Setter Property="BorderWidth" Value="1.5"/>
+                <Setter Property="CornerRadius" Value="8"/>
+                <Setter Property="Margin" Value="2,0"/>
+            </Style>
+        </ResourceDictionary>
+    </ContentPage.Resources>
+
+    <ContentPage.BindingContext>
+        <vm:MyPostViewModel />
+    </ContentPage.BindingContext>
+
+    <Grid RowDefinitions="Auto,*,Auto,80" Padding="10,10,10,0" BackgroundColor="{AppThemeBinding Light=#F6F8FC, Dark=#151A24}">
+        <!-- Filters -->
+        <ScrollView Orientation="Horizontal" Grid.Row="0">
+                         <HorizontalStackLayout Spacing="8" Padding="0,8">
+                <!-- use "all" token for the 全部 button so converter can compare easily -->
+                <Button Text="全部" Command="{Binding FilterCommand}" CommandParameter="all"
+                        BackgroundColor="{Binding SelectedFilter, Converter={StaticResource SelectedFilterToBackgroundConverter}, ConverterParameter=all}"
+                        TextColor="{AppThemeBinding Light=Black, Dark=White}"     BorderColor="LightSkyBlue" BorderWidth="1.5"/>
+
+                <Button Text="已发表" Command="{Binding FilterCommand}" CommandParameter="common"
+                        BackgroundColor="{Binding SelectedFilter, Converter={StaticResource SelectedFilterToBackgroundConverter}, ConverterParameter=common}"
+                        TextColor="{AppThemeBinding Light=Black, Dark=White}"      BorderColor="LightSkyBlue" BorderWidth="1.5"/>
+
+                <Button Text="草稿箱" Command="{Binding FilterCommand}" CommandParameter="save"
+                        BackgroundColor="{Binding SelectedFilter, Converter={StaticResource SelectedFilterToBackgroundConverter}, ConverterParameter=save}"
+                        TextColor="{AppThemeBinding Light=Black, Dark=White}"     BorderColor="LightSkyBlue" BorderWidth="1.5"/>
+
+                <Button Text="已关闭" Command="{Binding FilterCommand}" CommandParameter="close"
+                        BackgroundColor="{Binding SelectedFilter, Converter={StaticResource SelectedFilterToBackgroundConverter}, ConverterParameter=close}"
+                       TextColor="{AppThemeBinding Light=Black, Dark=White}"     BorderColor="LightSkyBlue" BorderWidth="1.5"/>
+
+                <Button Text="待审核" Command="{Binding FilterCommand}" CommandParameter="aduit"
+                        BackgroundColor="{Binding SelectedFilter, Converter={StaticResource SelectedFilterToBackgroundConverter}, ConverterParameter=aduit}"
+              TextColor="{AppThemeBinding Light=Black, Dark=White}"       BorderColor="LightSkyBlue" BorderWidth="1.5"/>
+
+                <Button Text="已忽略" Command="{Binding FilterCommand}" CommandParameter="ignored"
+                        BackgroundColor="{Binding SelectedFilter, Converter={StaticResource SelectedFilterToBackgroundConverter}, ConverterParameter=ignored}"
+                        TextColor="{AppThemeBinding Light=Black, Dark=White}"    BorderColor="LightSkyBlue" BorderWidth="1.5"/>
+
+                <Button Text="回收站" Command="{Binding FilterCommand}" CommandParameter="recyclebin"
+                        BackgroundColor="{Binding SelectedFilter, Converter={StaticResource SelectedFilterToBackgroundConverter}, ConverterParameter=recyclebin}"
+                        TextColor="{AppThemeBinding Light=Black, Dark=White}"     BorderColor="LightSkyBlue" BorderWidth="1.5"/>
+            </HorizontalStackLayout>
+        </ScrollView>
+
+        <!-- List -->
+        <Label Text="{Binding ErrorText}" HorizontalOptions="Center" TextColor="Red" Grid.Row="1"/>
+        <CollectionView Grid.Row="1" ItemsSource="{Binding Threads}" SelectionMode="None">
+            <CollectionView.ItemsLayout>
+                <LinearItemsLayout Orientation="Vertical" ItemSpacing="4" />
+            </CollectionView.ItemsLayout>
+            <CollectionView.ItemTemplate>
+                <DataTemplate>
+                    <Border
+                            Background="{AppThemeBinding Light=White, Dark=#202938}"
+                            Stroke="{AppThemeBinding Light=#E2E8F0, Dark=#334155}"
+                            StrokeThickness="1"
+                            StrokeShape="RoundRectangle 14">
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.SelectThreadCommand}" CommandParameter="{Binding .}"/>
+                        </Border.GestureRecognizers>
+                        <Border.Triggers>
+                            <DataTrigger
+                        TargetType="Border"
+                        Binding="{Binding IsReply}"
+                        Value="False">
+                                <Setter Property="HeightRequest" Value="110" />
+                            </DataTrigger>
+                        </Border.Triggers>
+                        <Grid RowDefinitions="*,30" ColumnDefinitions="*,150" Margin="10">
+                            <VerticalStackLayout Spacing="2">
+                                <Label Text="{Binding Title}" FontAttributes="Bold"  TextColor="{AppThemeBinding Light=Black, Dark=White}" LineBreakMode="TailTruncation" MaxLines="2" />
+                                <Label Text="{Binding Category}" FontSize="12"  TextColor="{AppThemeBinding Light=#FF6B6B, Dark=#FFB3B3}" />
+
+                                <VerticalStackLayout IsVisible="{Binding IsReply}" BindableLayout.ItemsSource="{Binding CommentContents}">
+                                    <BindableLayout.ItemTemplate>
+                                        <DataTemplate>
+                                            <StackLayout>
+                                                <Rectangle HeightRequest="{OnPlatform 3, Android=1}" Opacity="0.2" BackgroundColor="{AppThemeBinding Light=#AAAAAA, Dark=#CCCCCC}"/>
+                                                <Label Text="{Binding .,StringFormat='{0}'}" FontSize="12" FontAttributes="Bold" TextColor="{AppThemeBinding Light=DarkBlue, Dark=LightBlue}" LineBreakMode="TailTruncation" MaxLines="3" />
+                                            </StackLayout>
+                                        </DataTemplate>
+                                    </BindableLayout.ItemTemplate>
+                                </VerticalStackLayout>
+                            </VerticalStackLayout>
+
+                            <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="*,*" Grid.Column="1">
+                                <StackLayout Grid.ColumnSpan="2" HorizontalOptions="End" VerticalOptions="Start">
+                                    <Label Text="{Binding Id, StringFormat='ID {0}'}"  FontSize="12" TextColor="{AppThemeBinding Light=#AAAAAA, Dark=#CCCCCC}"/>
+                                </StackLayout>
+                                <!-- Replies Count -->
+                                <VerticalStackLayout Grid.Row="1" Margin="0,10,0,0">
+                                    <Label Text="{Binding Replies}" FontAttributes="Bold" FontSize="12" TextColor="{AppThemeBinding Light=#4C6EF5, Dark=#7FA3FF}" HorizontalTextAlignment="Center" />
+                                    <Label Text="回复"  FontSize="10" TextColor="{AppThemeBinding Light=Gray, Dark=#CCCCCC}" HorizontalTextAlignment="Center" />
+                                </VerticalStackLayout>
+                                <!-- Views Count -->
+                                <VerticalStackLayout Grid.Row="1" Margin="0,10,0,0" Grid.Column="1">
+                                    <Label Text="{Binding Views}"  FontAttributes="Bold" FontSize="12" TextColor="{AppThemeBinding Light=#51CF66, Dark=#8FE6A1}"  HorizontalTextAlignment="Center" />
+                                    <Label Text="查看"  FontSize="10" TextColor="{AppThemeBinding Light=Gray, Dark=#CCCCCC}" HorizontalTextAlignment="Center" />
+                                </VerticalStackLayout>
+                            </Grid>
+
+                            <Grid Grid.Row="1" Grid.ColumnSpan="2" ColumnDefinitions="*,*">
+                                <Label Text="{Binding Author, StringFormat='最后发表: {0}'}" FontSize="12" TextColor="{AppThemeBinding Light=Black, Dark=#CCCCCC}" VerticalOptions="End"/>
+                                <Label Text="{Binding PostTime, StringFormat='发表时间: {0:yyyy-MM-dd HH:mm}'}" FontSize="12" TextColor="{AppThemeBinding Light=Black, Dark=#CCCCCC}" HorizontalTextAlignment="End" VerticalOptions="End" Grid.Column="1"/>
+                            </Grid>
+                        </Grid>
+                    </Border>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+
+        <!-- Content type -->
+        <Grid Grid.Row="2" ColumnDefinitions="*,*" Padding="0,6" HeightRequest="48">
+            <Button Text="主题" Command="{Binding SelectContentTypeCommand}" CommandParameter="thread"
+                    BackgroundColor="{Binding IsReplyMode, Converter={StaticResource ContentTypeToBackgroundConverter}, ConverterParameter=thread}"
+                    Style="{StaticResource ThreadTypeButtonStyle}" />
+            <Button Text="回复" Command="{Binding SelectContentTypeCommand}" CommandParameter="reply" Grid.Column="1"
+                    BackgroundColor="{Binding IsReplyMode, Converter={StaticResource ContentTypeToBackgroundConverter}, ConverterParameter=reply}"
+                    Style="{StaticResource ReplyTypeButtonStyle}" />
+        </Grid>
+
+        <!-- Pagination -->
+        <Grid Grid.Row="3" ColumnDefinitions="*,*,*" BackgroundColor="{AppThemeBinding Light=#F6F8FC, Dark=#202938}" Padding="0,5">
+            <StackLayout>
+                <Button Command="{Binding PreviousPageCommand}" IsEnabled="{Binding CanGoPrevious}" Style="{StaticResource BottomNaviButtonStyle}">
+                    <Button.ImageSource>
+                        <FontImageSource Glyph="&#xE760;" Size="Large" Color="{AppThemeBinding Light=Black, Dark=White}" FontFamily="Segoe Fluent Icons"/>
+                    </Button.ImageSource>
+                </Button>
+                <Label Text="上一页" HorizontalOptions="Center" FontSize="12" TextColor="{AppThemeBinding Light=Black, Dark=White}"/>
+            </StackLayout>
+            
+            <Label Text="{Binding PageDisplay}" HorizontalOptions="Center" VerticalOptions="Center"  Grid.Column="1"/>
+            
+            <StackLayout Grid.Column="2">
+                <Button Command="{Binding NextPageCommand}" IsEnabled="{Binding CanGoNext}" Style="{StaticResource BottomNaviButtonStyle}" >
+                    <Button.ImageSource>
+                        <FontImageSource Glyph="&#xE761;" Size="Large" Color="{AppThemeBinding Light=Black, Dark=White}" FontFamily="Segoe Fluent Icons"/>
+                    </Button.ImageSource>
+                </Button>
+                <Label Text="下一页" HorizontalOptions="Center" FontSize="12" TextColor="{AppThemeBinding Light=Black, Dark=White}"/>
+            </StackLayout>
+        </Grid>
+    </Grid>
+
+</ContentPage>

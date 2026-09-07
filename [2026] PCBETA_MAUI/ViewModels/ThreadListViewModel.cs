@@ -1,7 +1,9 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Microsoft.Maui.Controls;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.IO;
 using System.Text.Json;
 using PCBetaMAUI.Models;
 using PCBetaMAUI.Services;
@@ -99,6 +101,8 @@ public partial class ThreadListViewModel : ObservableObject
             var stickyList = allThreads.Where(t => t.IsSticky).ToList();
             var regularList = allThreads.Where(t => !t.IsSticky && t.Id != "ERROR").ToList();
 
+            await Task.WhenAll(stickyList.Concat(regularList).Select(LoadStampSourceAsync));
+
             // 检查是否有错误
             var errorThread = allThreads.FirstOrDefault(t => t.Id == "ERROR");
             if (errorThread != null)
@@ -146,6 +150,42 @@ public partial class ThreadListViewModel : ObservableObject
         {
             IsLoading = false;
         }
+    }
+
+    private static async Task LoadStampSourceAsync(ThreadInfo thread)
+    {
+        var stampUrl = thread.StampUrl?.Trim();
+        if (string.IsNullOrEmpty(stampUrl))
+            return;
+
+        try
+        {
+            var imageBytes = await HttpClientManager.Instance.GetByteArrayAsync(stampUrl);
+            if (imageBytes.Length > 0)
+            {
+                thread.StampSource = CreateStampImageSource(imageBytes);
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Stamp image loading failed: {stampUrl}, {ex.Message}");
+        }
+    }
+
+    private static ImageSource CreateStampImageSource(byte[] imageBytes)
+    {
+#if ANDROID
+        using var bitmap = Android.Graphics.BitmapFactory.DecodeByteArray(imageBytes, 0, imageBytes.Length);
+        if (bitmap != null)
+        {
+            using var output = new MemoryStream();
+            bitmap.Compress(Android.Graphics.Bitmap.CompressFormat.Png, 100, output);
+            var firstFrameBytes = output.ToArray();
+            return ImageSource.FromStream(() => new MemoryStream(firstFrameBytes, writable: false));
+        }
+#endif
+
+        return ImageSource.FromStream(() => new MemoryStream(imageBytes, writable: false));
     }
 
     /// <summary>
@@ -275,19 +315,37 @@ public partial class ThreadListViewModel : ObservableObject
          /// </summary>
          private void DetectLoginStatus(string? xmlResponse)
          {
-             if (string.IsNullOrEmpty(xmlResponse))
+              if (ApiService.IsAccessChallengeResponse(xmlResponse))
+              {
+                  _isUserLoggedIn = false;
+                  Debug.WriteLine("[LoginDetection] 检测到空响应或 JavaScript 访问校验页，不能判定为已登录");
+                  return;
+              }
+
+              if (ApiService.IsUnauthenticatedResponse(xmlResponse))
              {
                  _isUserLoggedIn = false;
-                 Debug.WriteLine("[LoginDetection] XML响应为空，假设未登录");
+                  Debug.WriteLine("[LoginDetection] 响应包含未登录标记");
                  return;
              }
 
-             // 如果响应中包含 ">登录</a>"，说明用户未登录
-             _isUserLoggedIn = !xmlResponse.Contains(">登录</a>");
+              _isUserLoggedIn = true;
 
              Debug.WriteLine($"[LoginDetection] 登录检测完成: {(_isUserLoggedIn ? "✅ 已登录" : "❌ 未登录")}");
              Debug.WriteLine($"[LoginDetection] 关键字符检查: {(_isUserLoggedIn ? "不包含" : "包含")} '>登录</a>'");
-         }
+
+        /*
+             var (success, _) = await _apiService.LoginAsync(
+        UserCredentialsService.Instance.Username,
+        UserCredentialsService.Instance.Password
+    );
+    
+    if (success)
+    {
+        threadContent = await _apiService.GetThreadContentAsync(_currentThreadId, _currentPage);
     }
+         */
+    }
+}
 
 

@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:converters="clr-namespace:PCBetaMAUI.Converters"
+             x:Class="PCBetaMAUI.Views.MyFavoritePage"
+             x:Name="ThisPage" Shell.NavBarIsVisible="False"
+             Title="我的收藏">
+    
+    <ContentPage.Resources>
+        <ResourceDictionary>
+            <converters:StringNotEmptyToBoolConverter x:Key="StringNotEmptyToBoolConverter" />
+            <Style x:Key="BottomNaviButtonStyle" TargetType="Button">
+                <Setter Property="BackgroundColor" Value="Transparent"/>
+                <Setter Property="TextColor" Value="{AppThemeBinding Light=Black, Dark=White}"/>
+                <Setter Property="CornerRadius" Value="50"/>
+                <Setter Property="BorderWidth" Value="2"/>
+                <Setter Property="BorderColor" Value="LightBlue"/>
+                <Setter Property="Padding" Value="0"/>
+                <Setter Property="HeightRequest" Value="50"/>
+                <Setter Property="WidthRequest" Value="50"/>
+                <!--
+                                <Setter Property="VisualStateManager.VisualStateGroups">
+                    <VisualStateGroupList>
+                        <VisualStateGroup Name="CommonStates">
+                            <VisualState Name="Normal">
+                                <VisualState.Setters>
+                                    <Setter Property="BackgroundColor" Value="DodgerBlue"/>
+                                </VisualState.Setters>
+                            </VisualState>
+                            <VisualState Name="PointerOver">
+                                <VisualState.Setters>
+                                    <Setter Property="BackgroundColor" Value="SkyBlue"/>
+                                </VisualState.Setters>
+                            </VisualState>
+                            <VisualState Name="Pressed">
+                                <VisualState.Setters>
+                                    <Setter Property="BackgroundColor" Value="LightBlue"/>
+                                </VisualState.Setters>
+                            </VisualState>
+                        </VisualStateGroup>
+                    </VisualStateGroupList>
+                </Setter>
+                -->
+            </Style>
+        </ResourceDictionary>
+    </ContentPage.Resources>
+    <Grid Padding="16,0" RowDefinitions="80,*,80" BackgroundColor="{AppThemeBinding Light=#F6F8FC, Dark=#151A24}">
+        <StackLayout VerticalOptions="Start" Margin="10,10,0,0">
+            <HorizontalStackLayout >
+                <CheckBox IsChecked="{Binding AllSelectedCheck, Mode=TwoWay}" VerticalOptions="Center"/>
+                <Label Text="全选/反选" VerticalOptions="Center" />
+                <Button Command="{Binding DeleteSelectedCommand}" BackgroundColor="{AppThemeBinding Light=Red, Dark=OrangeRed}" HeightRequest="35" Margin="60,0,0,0">
+                    <Button.ImageSource>
+                        <FontImageSource Glyph="&#xE74d;" Size="Small" Color="White" FontFamily="Segoe Fluent Icons"/>
+                    </Button.ImageSource>
+                </Button>
+            </HorizontalStackLayout>
+            <Label Text="{Binding ErrorMessage}" TextColor="Red" IsVisible="{Binding ErrorMessage, Converter={StaticResource StringNotEmptyToBoolConverter}}"/>
+        </StackLayout>
+ 
+        <CollectionView ItemsSource="{Binding Favorites}" SelectionMode="None" x:Name="FavoritesCollection" Grid.Row="1">
+            <CollectionView.ItemTemplate>
+                <DataTemplate>
+                    <Grid Padding="12" Margin="0,2" BackgroundColor="{AppThemeBinding Light=White, Dark=#202938}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="40" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="120" />
+                        </Grid.ColumnDefinitions>
+
+                        <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay}" VerticalOptions="Center" />
+
+                        <Label Grid.Column="1" Text="{Binding Title}" LineBreakMode="TailTruncation" VerticalOptions="Center"/>
+
+                        <Label Grid.Column="2" Text="{Binding AddedTime}" HorizontalTextAlignment="End" VerticalTextAlignment="Center" />
+
+                        <Grid.GestureRecognizers>
+                            <TapGestureRecognizer Command="{Binding Source={x:Reference ThisPage}, Path=BindingContext.SelectFavoriteCommand}" CommandParameter="{Binding .}" />
+                        </Grid.GestureRecognizers>
+                    </Grid>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+
+        <Grid ColumnDefinitions="*,*,*" Grid.Row="2" BackgroundColor="{AppThemeBinding Light=#F6F8FC, Dark=#202938}" Padding="0,5">
+            <StackLayout>
+                <Button Command="{Binding RefreshCommand}" Style="{StaticResource BottomNaviButtonStyle}">
+                    <Button.ImageSource>
+                        <FontImageSource Glyph="&#xE72c;" Size="Medium" Color="{AppThemeBinding Light=Black, Dark=White}" FontFamily="Segoe Fluent Icons"/>
+                    </Button.ImageSource>
+                </Button>
+                <Label Text="刷新" HorizontalOptions="Center" FontSize="12" TextColor="{AppThemeBinding Light=Black, Dark=White}"/>
+            </StackLayout>
+            <StackLayout Grid.Column="1">
+                <Button Command="{Binding GoToPreviousPageCommand}" IsEnabled="{Binding CanGoToPreviousPage}" Style="{StaticResource BottomNaviButtonStyle}">
+                    <Button.ImageSource>
+                        <FontImageSource Glyph="&#xE760;" Size="Large" Color="{AppThemeBinding Light=Black, Dark=White}" FontFamily="Segoe Fluent Icons"/>
+                    </Button.ImageSource>
+                </Button>
+                <Label Text="上一页" HorizontalOptions="Center" FontSize="12" TextColor="{AppThemeBinding Light=Black, Dark=White}"/>
+            </StackLayout>
+            <StackLayout Grid.Column="2">
+                <Button Command="{Binding GoToNextPageCommand}" IsEnabled="{Binding CanGoToNextPage}" Style="{StaticResource BottomNaviButtonStyle}" >
+                    <Button.ImageSource>
+                        <FontImageSource Glyph="&#xE761;" Size="Large" Color="{AppThemeBinding Light=Black, Dark=White}" FontFamily="Segoe Fluent Icons"/>
+                    </Button.ImageSource>
+                </Button>
+                <Label Text="下一页" HorizontalOptions="Center" FontSize="12" TextColor="{AppThemeBinding Light=Black, Dark=White}"/>
+            </StackLayout>
+        </Grid>
+    </Grid>
+</ContentPage>

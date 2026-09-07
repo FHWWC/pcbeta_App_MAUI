@@ -8,7 +8,7 @@ namespace PCBetaMAUI.Services;
 /// </summary>
 public partial class ApiService
 {
-    private const string BaseUrl = "https://bbs.pcbeta.com";
+    public const string BaseUrl = "https://bbs.pcbeta.com";
     private readonly XmlParsingService _xmlParsingService;
 
     /// <summary>
@@ -16,9 +16,164 @@ public partial class ApiService
     /// </summary>
     public string LastPageContent { get; private set; } = string.Empty;
 
+    /// <summary>
+    /// 判断响应是否为站点访问校验页，而不是正常业务页面。
+    /// </summary>
+    public static bool IsAccessChallengeResponse(string? responseContent)
+    {
+        if (string.IsNullOrWhiteSpace(responseContent))
+            return true;
+
+        return responseContent.Contains("请启用 JavaScript", StringComparison.OrdinalIgnoreCase) ||
+               responseContent.Contains("access_js_verified", StringComparison.OrdinalIgnoreCase) ||
+               responseContent.Contains("access_js_platform", StringComparison.OrdinalIgnoreCase) ||
+               responseContent.Contains("__access_review", StringComparison.OrdinalIgnoreCase) ||
+               responseContent.Contains("access_env_challenge", StringComparison.OrdinalIgnoreCase) ||
+               responseContent.Contains("access_env_verified", StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// 判断响应是否明确表示未登录。
+    /// </summary>
+    public static bool IsUnauthenticatedResponse(string? responseContent)
+    {
+        if (IsAccessChallengeResponse(responseContent))
+            return true;
+
+        return string.IsNullOrWhiteSpace(responseContent) ||
+               responseContent.Contains(">登录</a>", StringComparison.OrdinalIgnoreCase) ||
+               responseContent.Contains("请登录", StringComparison.OrdinalIgnoreCase);
+    }
+
     public ApiService()
     {
         _xmlParsingService = new XmlParsingService();
+    }
+
+    public async Task<string> SubmitPollAsync(string forumId, string threadId, string formHash, IEnumerable<string> optionIds)
+    {
+        try
+        {
+            var url = $"{BaseUrl}/forum.php?mod=misc&action=votepoll&fid={Uri.EscapeDataString(forumId)}&tid={Uri.EscapeDataString(threadId)}&pollsubmit=yes&quickforward=yes&inajax=1";
+            var values = new List<KeyValuePair<string, string>>
+            {
+                new("formhash", formHash),
+                new("pollsubmit", "true")
+            };
+            values.AddRange(optionIds.Select(id => new KeyValuePair<string, string>("pollanswers[]", id)));
+
+            using var content = new FormUrlEncodedContent(values);
+            var response = await HttpClientManager.Instance.PostAsync(url, content);
+            var result = await response.Content.ReadAsStringAsync();
+            if (!response.IsSuccessStatusCode)
+                return string.Empty;
+
+            LastPageContent = result;
+            return result;
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"SubmitPollAsync error: {ex.Message}");
+            return string.Empty;
+        }
+    }
+
+    /// <summary>
+    /// 获取我的收藏页面 HTML (type=thread)
+    /// </summary>
+    public async Task<string> GetMyFavoritePageHtmlAsync(int page = 1)
+    {
+        try
+        {
+            var url = $"https://i.pcbeta.com/home.php?mod=space&do=favorite&type=thread&inajax=1";
+            if (page > 1)
+                url += $"&page={page}";
+
+            var response = await HttpClientManager.Instance.GetAsync(url);
+            response.EnsureSuccessStatusCode();
+
+            var content = await response.Content.ReadAsStringAsync();
+            LastPageContent = content;
+            return content;
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"GetMyFavoritePageHtml error: {ex.Message}");
+            return string.Empty;
+        }
+    }
+
+    /// <summary>
+    /// Fetches "我的帖子" 页面（用户个人发布的帖子）
+    /// URL: https://i.pcbeta.com/home.php?mod=space&do=thread&view=me&type=thread&inajax=1
+    /// 支持 type、page 和 filter 参数
+    /// </summary>
+    public async Task<List<Models.ThreadInfo>> GetMyPostsAsync(int page = 1, string filter = "", string type = "thread")
+    {
+        try
+        {
+            type = type == "reply" ? "reply" : "thread";
+            var url = $"https://i.pcbeta.com/home.php?mod=space&do=thread&view=me&type={type}&inajax=1";
+            if (page > 1)
+                url += $"&page={page}";
+            if (!string.IsNullOrEmpty(filter))
+                url += $"&filter={Uri.EscapeDataString(filter)}";
+
+            var response = await HttpClientManager.Instance.GetAsync(url);
+            string content = string.Empty;
+
+            if (response.IsSuccessStatusCode)
+            {
+                content = await response.Content.ReadAsStringAsync();
+            }
+
+            // Do NOT use local sample data for production; if response is empty, return parsed result (may be empty)
+            LastPageContent = content ?? string.Empty;
+            return _xmlParsingService.ParseMyPosts(content ?? string.Empty, type == "reply");
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"GetMyPostsAsync error: {ex.Message}");
+            return new List<Models.ThreadInfo>();
+        }
+    }
+
+    /// <summary>
+    /// 删除单个收藏
+    /// POST：https://i.pcbeta.com/home.php?mod=spacecp&ac=favorite&op=delete&favid=FAVID&type=thread&inajax=1
+    /// Form参数：
+    /// - referer: https://i.pcbeta.com/home.php?mod=space&do=favorite&type=thread
+    /// - deletesubmit: true
+    /// - formhash: 从收藏页面获取
+    /// - handlekey: a_delete_FAVID
+    /// </summary>
+    public async Task<string> DeleteFavoriteAsync(string favId, string formHash, string handleKey)
+    {
+        try
+        {
+            var url = $"https://i.pcbeta.com/home.php?mod=spacecp&ac=favorite&op=delete&favid={favId}&type=thread&inajax=1";
+
+            var formData = new Dictionary<string, string>
+            {
+                { "referer", "https://i.pcbeta.com/home.php?mod=space&do=favorite&type=thread" },
+                { "deletesubmit", "true" },
+                { "formhash", formHash },
+                { "handlekey", handleKey }
+            };
+
+            var content = new FormUrlEncodedContent(formData);
+            var response = await HttpClientManager.Instance.PostAsync(url, content);
+            response.EnsureSuccessStatusCode();
+
+            var result = await response.Content.ReadAsStringAsync();
+            Debug.WriteLine($"✅ 删除收藏请求已发送 (favId={favId})");
+            return result;
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"❌ 删除收藏错误: {ex.Message}");
+            return string.Empty;
+        }
     }
 
     public class ApiResultModel
@@ -34,15 +189,29 @@ public partial class ApiService
     {
         try
         {
-            var loginUrl = $"{BaseUrl}/member.php?mod=logging&action=login&username={Uri.EscapeDataString(username)}&password={Uri.EscapeDataString(password)}&loginsubmit=yes&loginhash=L"+ GenerateRandomCode() + "&inajax=1";
+            var loginUrl = $"{BaseUrl}/member.php?mod=logging&action=login&loginsubmit=yes&loginhash=L" + GenerateRandomCode() + "&inajax=1";
+
+            var formData = new Dictionary<string, string>
+            {
+                { "username", username },
+                { "password", password }
+            };
 
             if (!string.IsNullOrEmpty(questionId) && !string.IsNullOrEmpty(answer))
             {
-                loginUrl += $"&questionid={Uri.EscapeDataString(questionId)}&answer={Uri.EscapeDataString(answer)}";
+                formData["questionid"] = questionId;
+                formData["answer"] = answer;
             }
 
-            var response = await HttpClientManager.Instance.GetAsync(loginUrl);
-            response.EnsureSuccessStatusCode();
+            using var requestContent = new FormUrlEncodedContent(formData);
+            using var request = new HttpRequestMessage(HttpMethod.Post, loginUrl)
+            {
+                Content = requestContent
+            };
+            //request.Headers.UserAgent.ParseAdd("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36");
+
+            var response = await HttpClientManager.Instance.SendAsync(request);
+            //response.EnsureSuccessStatusCode();
 
             var content = await response.Content.ReadAsStringAsync();
             return _xmlParsingService.IsLoginSuccessful(content);
@@ -279,10 +448,20 @@ public partial class ApiService
         try
         {
             var response = await HttpClientManager.Instance.GetAsync($"{BaseUrl}/forum.php?inajax=1");
-            return response.IsSuccessStatusCode;
+            var responseContent = await response.Content.ReadAsStringAsync();
+
+            if (!response.IsSuccessStatusCode || IsUnauthenticatedResponse(responseContent))
+            {
+                Debug.WriteLine("[LoginDetection] 响应明确表示未登录或访问校验失败");
+                return false;
+            }
+
+            Debug.WriteLine("[LoginDetection] 响应未发现未登录或访问校验标记，判定为已登录");
+            return true;
         }
-        catch
+        catch (Exception ex)
         {
+            Debug.WriteLine($"[LoginDetection] 登录状态请求失败: {ex.Message}");
             return false;
         }
     }
@@ -858,7 +1037,7 @@ public partial class ApiService
             }
 
             var content = new FormUrlEncodedContent(data);
-            var submitUrl = $"{BaseUrl}/forum.php?mod=post&action=reply&replysubmit=yes&inajax=1";
+            var submitUrl = $"{BaseUrl}/forum.php?mod=post&action=reply&infloat=yes&replysubmit=yes&inajax=1";
 
             Debug.WriteLine($"📝 开始提交回帖: fid={forumId}, tid={threadId}");
 
@@ -980,7 +1159,7 @@ public partial class ApiService
             }
 
             var content = new FormUrlEncodedContent(data);
-            var submitUrl = $"{BaseUrl}/forum.php?mod=post&action=reply&replysubmit=yes&inajax=1";
+            var submitUrl = $"{BaseUrl}/forum.php?mod=post&action=reply&infloat=yes&replysubmit=yes&inajax=1";
 
             Debug.WriteLine($"📝 开始提交回帖: fid={forumId}, tid={threadId}");
             Debug.WriteLine($"   - noticetrimstr: {noticetrimstr}");
@@ -1149,7 +1328,7 @@ public partial class ApiService
     {
         try
         {
-            var url = $"{BaseUrl}/forum.php?mod=misc&action=rate&ratesubmit=yes&inajax=1";
+            var url = $"{BaseUrl}/forum.php?mod=misc&action=rate&infloat=yes&ratesubmit=yes&inajax=1";
 
             var postData = new Dictionary<string, string>
             {
@@ -1926,7 +2105,7 @@ public partial class ApiService
             }
 
             var content = new FormUrlEncodedContent(data);
-            var submitUrl = $"{BaseUrl}/forum.php?mod=post&action=newthread&fid={forumId}&extra=&topicsubmit=yes";
+            var submitUrl = $"{BaseUrl}/forum.php?mod=post&action=newthread&fid={forumId}&extra=&infloat=yes&topicsubmit=yes";
 
             Debug.WriteLine($"📝 开始提交新帖: fid={forumId}");
             Debug.WriteLine($"   - 标题: {subject.Substring(0, Math.Min(50, subject.Length))}");

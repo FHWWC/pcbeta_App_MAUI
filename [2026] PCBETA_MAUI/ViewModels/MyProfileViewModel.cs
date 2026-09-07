@@ -50,6 +50,7 @@ public partial class MyProfileViewModel : ObservableObject
             {
                 //处理SVG头像
                 await CheckUserAvatar(profile);
+                await LoadProfileImagesAsync(profile);
                 ProfileInfo = profile;
 
                 HasMedals = profile.Medals?.Count > 0;
@@ -68,6 +69,19 @@ public partial class MyProfileViewModel : ObservableObject
         {
             IsLoading = false;
         }
+    }
+
+    private static async Task LoadProfileImagesAsync(UserProfileInfo profile)
+    {
+        profile.AvatarSource = await ImageDataLoader.LoadAsync(profile.AvatarUrl);
+
+        if (profile.Medals == null)
+            return;
+
+        await Task.WhenAll(profile.Medals.Select(async medal =>
+        {
+            medal.ImageSource = await ImageDataLoader.LoadAsync(medal.ImageUrl);
+        }));
     }
 
     /// <summary>

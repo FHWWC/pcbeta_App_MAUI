@@ -5,6 +5,9 @@ using PCBetaMAUI.Services;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using static PCBetaMAUI.Services.ApiService;
+using Microsoft.Maui.Controls;
+using Microsoft.Maui.ApplicationModel;
+using Microsoft.Maui.Graphics;
 
 namespace PCBetaMAUI.ViewModels;
 
@@ -41,6 +44,9 @@ public partial class ThreadContentViewModel : ObservableObject
     private string otherIfm = string.Empty;
 
     [ObservableProperty]
+    private string replyRewardText = string.Empty;
+
+    [ObservableProperty]
     private string threadID = string.Empty;
 
     [ObservableProperty]
@@ -65,6 +71,9 @@ public partial class ThreadContentViewModel : ObservableObject
     private int currentPage = 1;
 
     [ObservableProperty]
+    private int totalPage = 1;
+
+    [ObservableProperty]
     private List<ContentElement> contentElements = new();
 
     [ObservableProperty]
@@ -75,6 +84,15 @@ public partial class ThreadContentViewModel : ObservableObject
 
     [ObservableProperty]
     private string? moderationInfo = null;  //  新增：审核信息 - 格式：本主题由 审核员 于 日期 审核通过
+
+    [ObservableProperty]
+    private PollInfo? poll;
+
+    [ObservableProperty]
+    private bool hasPoll;
+
+    [ObservableProperty]
+    private bool isSubmittingPoll;
 
     [ObservableProperty]
     private ObservableCollection<CommentInfo> comments = new();  //  新增：评论列表
@@ -155,6 +173,13 @@ public partial class ThreadContentViewModel : ObservableObject
     [ObservableProperty]
     private string commentFormHash = string.Empty;  //  点评表单的formhash（从页面获取）
 
+    // 短提示面板内容和可见性（供页面显示/动画使用）
+    [ObservableProperty]
+    private string transientMessageText = string.Empty;
+
+    [ObservableProperty]
+    private bool transientMessageVisible = false;
+
     public string ForumId => _currentForumId ?? string.Empty;
 
     public string RatingRangeDisplay => $"可评分范围：{MinScore} - {MaxScore}";
@@ -164,6 +189,82 @@ public partial class ThreadContentViewModel : ObservableObject
         _apiService = new ApiService();
         _navigationService = new NavigationService();
         _alertService = new AlertService();  //  新增：初始化弹窗服务
+    }
+
+    [RelayCommand]
+    public async Task Favorite()
+    {
+        try
+        {
+            // 验证登录
+            var loggedIn = await _apiService.IsLoggedInAsync();
+            if (!loggedIn)
+            {
+                // 导航到登录页
+                await _navigationService.NavigateToAsync("login");
+                return;
+            }
+
+            // 确保有 formhash（若没有则尝试从线程页面获取）
+            var formhash = _currentRatingFormData?.FormHash ?? string.Empty;
+            if (string.IsNullOrEmpty(formhash))
+            {
+                try
+                {
+                    var fetched = await _apiService.GetFormHashFromThreadAsync(CurrentThreadUrl + "&inajax=1");
+                    if (!string.IsNullOrEmpty(fetched))
+                    {
+                        formhash = fetched;
+                        if (_currentRatingFormData == null) _currentRatingFormData = new RatingFormData { FormHash = fetched };
+                        else _currentRatingFormData.FormHash = fetched;
+                    }
+                }
+                catch { }
+            }
+            var tid = _currentThreadId ?? ThreadID;
+            var url = $"https://bbs.pcbeta.com/home.php?mod=spacecp&ac=favorite&type=thread&id={Uri.EscapeDataString(tid)}&formhash={Uri.EscapeDataString(formhash)}&inajax=1";
+
+            var response = await HttpClientManager.Instance.GetAsync(url);
+            var content = await response.Content.ReadAsStringAsync();
+
+            // 解析返回内容，检查是否包含 信息收藏成功 标识
+            string message = "收藏失败";
+            if (content.Contains("信息收藏成功") || content.Contains("succeedhandle_"))
+            {
+                message = "收藏成功";
+            }
+            else
+            {
+                // 尝试从CDATA中提取更详细错误信息
+                var start = content.IndexOf("CDATA[");
+                if (start >= 0)
+                {
+                    var end = content.IndexOf("]]", start);
+                    if (end > start)
+                    {
+                        var cdata = content.Substring(start + 6, end - start - 6);
+                        // 移除HTML标签
+                        var plain = System.Text.RegularExpressions.Regex.Replace(cdata, "<.*?>", "");
+                        plain = System.Net.WebUtility.HtmlDecode(plain).Trim();
+                        if (!string.IsNullOrEmpty(plain)) message = plain;
+                    }
+                }
+            }
+
+            // 在 VM 中设置提示文本并控制可见性，UI 层负责动画
+            TransientMessageText = message;
+            // Show
+            TransientMessageVisible = true;
+
+            // 保持 4 秒后隐藏
+            await Task.Delay(4000);
+            TransientMessageVisible = false;
+
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"收藏出错: {ex.Message}");
+        }
     }
 
     /// <summary>
@@ -211,74 +312,90 @@ public partial class ThreadContentViewModel : ObservableObject
             if (threadContent != null)
             {
                 ThreadTitle = threadContent.Title ?? ThreadTitle;
-                Author = threadContent.Author ?? "Unknown";
-
-                // 使用纯文本版本显示（可以后续改为使用富文本元素列表）
-                Content = string.IsNullOrEmpty(threadContent.PlainTextContent)
-                    ? threadContent.RawHtmlContent
-                    : threadContent.PlainTextContent;
-
-                PostTime = threadContent.PostTime;
-                OtherIfm = threadContent.OtherIfm;
-                Replies = threadContent.Replies;
-                ThreadID = _currentThreadId;
-
-                //  新增：赋值编辑状态和审核信息
-                EditStatus = threadContent.EditStatus;
-                ModerationInfo = threadContent.ModerationInfo;
-
-                //  ✅ 新增：赋值编辑楼主发帖的权限和URL
-                CanEditOp = threadContent.CanEditOp;
-                Debug.WriteLine($" ViewModel 已设置 CanEditOp={CanEditOp}, EditOpUrl={threadContent.EditOpUrl?.Substring(0, Math.Min(50, threadContent.EditOpUrl?.Length ?? 0)) ?? "null"}");
-
-                if (!string.IsNullOrEmpty(EditStatus))
+                _currentForumId = threadContent.ForumId ?? _currentForumId;
+                //只有在第一页才设置楼主信息和帖子内容等等，后续页只更新回帖列表和分页信息
+                if (_currentPage == 1)
                 {
-                    Debug.WriteLine($" ViewModel 已设置 EditStatus: {EditStatus}");
-                }
-                if (!string.IsNullOrEmpty(ModerationInfo))
-                {
-                    Debug.WriteLine($" ViewModel 已设置 ModerationInfo: {ModerationInfo}");
-                }
+                    Author = threadContent.Author ?? "Unknown";
+                    // 使用纯文本版本显示（可以后续改为使用富文本元素列表）
+                    Content = string.IsNullOrEmpty(threadContent.PlainTextContent)
+                        ? threadContent.RawHtmlContent
+                        : threadContent.PlainTextContent;
 
-                //  新增：处理评论
-                Comments.Clear();
-                HasComments = false;
-                if (threadContent.Comments != null && threadContent.Comments.Count > 0)
-                {
-                    foreach (var comment in threadContent.Comments)
+                    PostTime = threadContent.PostTime;
+                    OtherIfm = threadContent.OtherIfm;
+                    Replies = threadContent.Replies;
+                    ThreadID = _currentThreadId;
+                    ReplyRewardText = threadContent.ReplyRewardText;
+
+                    //  新增：赋值编辑状态和审核信息
+                    EditStatus = threadContent.EditStatus;
+                    ModerationInfo = threadContent.ModerationInfo;
+                    Poll = threadContent.Poll;
+                    HasPoll = Poll != null;
+
+                    //  ✅ 新增：赋值编辑楼主发帖的权限和URL
+                    CanEditOp = threadContent.CanEditOp;
+                    Debug.WriteLine($" ViewModel 已设置 CanEditOp={CanEditOp}, EditOpUrl={threadContent.EditOpUrl?.Substring(0, Math.Min(50, threadContent.EditOpUrl?.Length ?? 0)) ?? "null"}");
+                    if (!string.IsNullOrEmpty(EditStatus))
                     {
-                        Comments.Add(comment);
+                        Debug.WriteLine($" ViewModel 已设置 EditStatus: {EditStatus}");
                     }
-                    HasComments = true;
-                    Debug.WriteLine($" ViewModel 已加载 {Comments.Count} 条评论");
-                }
 
-                //  新增：为楼主创建一个虚拟的 ReplyInfo 对象（用于评分）
-                ThreadAuthorInfo = new ReplyInfo
-                {
-                    Id = !string.IsNullOrEmpty(threadContent.AuthorPostId) 
-                        ? $"post_{threadContent.AuthorPostId}" 
-                        : "post_1",  //  使用提取的post ID，如果为空则回退到post_1
-                    Username = Author,
-                    UserId = "author",
-                    FloorNumber = "1楼",
-                    PostTime = PostTime,
-                    RatingUrl = threadContent.RatingUrl,
-                    CanRate = !string.IsNullOrEmpty(threadContent.RatingUrl)
-                };
-                // Ensure ReplyId is set (SubmitRatingAsync checks ReplyId). Keep it consistent with Id.
-                ThreadAuthorInfo.ReplyId = ThreadAuthorInfo.Id;
-                Debug.WriteLine($"✅ 为楼主创建 ReplyInfo: Id={ThreadAuthorInfo.Id}, Username={ThreadAuthorInfo.Username}, CanRate={ThreadAuthorInfo.CanRate}");
+                    if (!string.IsNullOrEmpty(ModerationInfo))
+                    {
+                        Debug.WriteLine($" ViewModel 已设置 ModerationInfo: {ModerationInfo}");
+                    }
 
-                //  新增：处理评分
-                RatingSummaryData = threadContent.RatingSummary;
-                HasRatings = RatingSummaryData != null && (RatingSummaryData.TotalRatingCount > 0 || RatingSummaryData.RatingDetails.Count > 0);
-                if (HasRatings)
-                {
-                    Debug.WriteLine($" ViewModel 已加载评分汇总: 总数={RatingSummaryData?.TotalRatingCount ?? 0}, 详情数={RatingSummaryData?.RatingDetails.Count ?? 0}");
+                    //  新增：处理楼主帖子的点评
+                    await PrepareCommentAvatarsAsync(threadContent.Comments);
+                    Comments.Clear();
+                    HasComments = false;
+                    if (threadContent.Comments != null && threadContent.Comments.Count > 0)
+                    {
+                        foreach (var comment in threadContent.Comments)
+                        {
+                            Comments.Add(comment);
+                        }
+                        HasComments = true;
+                        Debug.WriteLine($" ViewModel 已加载 {Comments.Count} 条评论");
+                    }
+
+
+                    //  新增：为楼主创建一个虚拟的 ReplyInfo 对象（用于评分）
+                    ThreadAuthorInfo = new ReplyInfo
+                    {
+                        Id = !string.IsNullOrEmpty(threadContent.AuthorPostId)
+                            ? $"post_{threadContent.AuthorPostId}"
+                            : "post_1",  //  使用提取的post ID，如果为空则回退到post_1
+                        Username = Author,
+                        UserId = "author",
+                        FloorNumber = "1楼",
+                        PostTime = PostTime,
+                        RatingUrl = threadContent.RatingUrl,
+                        CanRate = !string.IsNullOrEmpty(threadContent.RatingUrl)
+                    };
+                    // Ensure ReplyId is set (SubmitRatingAsync checks ReplyId). Keep it consistent with Id.
+                    ThreadAuthorInfo.ReplyId = ThreadAuthorInfo.Id;
+                    Debug.WriteLine($"✅ 为楼主创建 ReplyInfo: Id={ThreadAuthorInfo.Id}, Username={ThreadAuthorInfo.Username}, CanRate={ThreadAuthorInfo.CanRate}");
+
+
+                    //  新增：处理楼主帖子的评分
+                    if (threadContent.RatingSummary?.RatingDetails != null)
+                    {
+                        await PrepareRatingAvatarsAsync(threadContent.RatingSummary.RatingDetails);
+                    }
+                    RatingSummaryData = threadContent.RatingSummary;
+                    HasRatings = RatingSummaryData != null && (RatingSummaryData.TotalRatingCount > 0 || RatingSummaryData.RatingDetails.Count > 0);
+                    if (HasRatings)
+                    {
+                        Debug.WriteLine($" ViewModel 已加载评分汇总: 总数={RatingSummaryData?.TotalRatingCount ?? 0}, 详情数={RatingSummaryData?.RatingDetails.Count ?? 0}");
+                    }
+
                 }
 
                 //  新增：处理回帖
+                await PrepareReplyAvatarsAsync(threadContent.ReplyList);
                 ReplyList.Clear();
                 HasReplies = false;
                 if (threadContent.ReplyList != null && threadContent.ReplyList.Count > 0)
@@ -308,6 +425,7 @@ public partial class ThreadContentViewModel : ObservableObject
                 // 更新分页按钮 - 基于实际的分页数据，而不是 Replies 字段
                 CanGoToPreviousPage = _currentPage > 1;
                 CanGoToNextPage = _currentPage < threadContent.TotalPages;
+                TotalPage= threadContent.TotalPages;
 
                 Debug.WriteLine($"📖 分页按钮状态: 上一页={CanGoToPreviousPage}, 下一页={CanGoToNextPage}");
             }
@@ -317,6 +435,7 @@ public partial class ThreadContentViewModel : ObservableObject
                 HasContent = false;
             }
         }
+
         catch (Exception ex)
         {
             Debug.WriteLine($"❌ 加载线程内容错误: {ex.Message}");
@@ -326,6 +445,68 @@ public partial class ThreadContentViewModel : ObservableObject
         finally
         {
             IsLoading = false;
+        }
+    }
+
+    private static async Task PrepareCommentAvatarsAsync(IEnumerable<CommentInfo>? comments)
+    {
+        if (comments == null)
+        {
+            return;
+        }
+
+        await Task.WhenAll(comments.Select(async comment =>
+        {
+            comment.AvatarSource = await LoadAvatarSourceAsync(comment.AvatarUrl);
+        }));
+    }
+
+    private static async Task PrepareRatingAvatarsAsync(IEnumerable<RatingInfo> ratings)
+    {
+        await Task.WhenAll(ratings.Select(async rating =>
+        {
+            rating.AvatarSource = await LoadAvatarSourceAsync(rating.AvatarUrl);
+        }));
+    }
+
+    private static async Task PrepareReplyAvatarsAsync(IEnumerable<ReplyInfo>? replies)
+    {
+        if (replies == null)
+        {
+            return;
+        }
+
+        await Task.WhenAll(replies.Select(async reply =>
+        {
+            reply.AvatarSource = await LoadAvatarSourceAsync(reply.AvatarUrl);
+        }));
+    }
+
+    private static async Task<ImageSource?> LoadAvatarSourceAsync(string? avatarUrl)
+    {
+        var trimmedUrl = avatarUrl?.Trim();
+        if (string.IsNullOrEmpty(trimmedUrl))
+        {
+            return null;
+        }
+
+        if (!Uri.TryCreate(trimmedUrl, UriKind.Absolute, out var uri) ||
+            (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
+        {
+            return ImageSource.FromFile(trimmedUrl);
+        }
+
+        try
+        {
+            var imageBytes = await HttpClientManager.Instance.GetByteArrayAsync(trimmedUrl);
+            return imageBytes.Length == 0
+                ? null
+                : ImageSource.FromStream(() => new MemoryStream(imageBytes, writable: false));
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Avatar loading failed: {trimmedUrl}, {ex.Message}");
+            return null;
         }
     }
 
@@ -380,6 +561,67 @@ public partial class ThreadContentViewModel : ObservableObject
         await LoadThreadContentAsync();
     }
 
+    [RelayCommand]
+    public async Task SubmitPollAsync()
+    {
+        if (Poll == null || !Poll.CanVote || IsSubmittingPoll)
+            return;
+
+        var selectedIds = Poll.Options.Where(option => option.IsSelected).Select(option => option.Id).ToList();
+        if (selectedIds.Count == 0)
+        {
+            ErrorMessage = "请选择至少一个投票选项";
+            return;
+        }
+
+        if (!Poll.IsMultiple && selectedIds.Count > 1)
+        {
+            ErrorMessage = "单选投票只能选择一个选项";
+            return;
+        }
+
+        if (Poll.MaxChoices > 0 && selectedIds.Count > Poll.MaxChoices)
+        {
+            ErrorMessage = $"最多只能选择 {Poll.MaxChoices} 项";
+            return;
+        }
+
+        try
+        {
+            if (!await _apiService.IsLoggedInAsync())
+            {
+                await _navigationService.NavigateToAsync("login");
+                return;
+            }
+
+            IsSubmittingPoll = true;
+            var response = await _apiService.SubmitPollAsync(ForumId, _currentThreadId ?? string.Empty, Poll.FormHash, selectedIds);
+            if (string.IsNullOrWhiteSpace(response))
+            {
+                ErrorMessage = "投票提交失败，请稍后重试";
+                return;
+            }
+
+            if (_apiService.LastPageContent.Contains("错误", StringComparison.OrdinalIgnoreCase) ||
+                _apiService.LastPageContent.Contains("不能投票", StringComparison.OrdinalIgnoreCase))
+            {
+                ErrorMessage = "投票未提交成功，请检查投票状态";
+                return;
+            }
+
+            await RefreshAsync();
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"投票提交失败: {ex.Message}";
+            Debug.WriteLine($"❌ {ErrorMessage}");
+        }
+        finally
+        {
+            IsSubmittingPoll = false;
+        }
+    }
+
     /// <summary>
     ///  新增：切换点评（评论）展开/收回状态
     /// </summary>
@@ -416,6 +658,15 @@ public partial class ThreadContentViewModel : ObservableObject
     [RelayCommand]
     public async Task RateThreadAuthorAsync()
     {
+        // 验证登录
+        var loggedIn = await _apiService.IsLoggedInAsync();
+        if (!loggedIn)
+        {
+            // 导航到登录页
+            await _navigationService.NavigateToAsync("login");
+            return;
+        }
+
         if (ThreadAuthorInfo == null)
         {
             ErrorMessage = "无法获取楼主信息";
@@ -438,6 +689,15 @@ public partial class ThreadContentViewModel : ObservableObject
     [RelayCommand]
     public async Task OpenRatingAsync(ReplyInfo reply)
     {
+        // 验证登录
+        var loggedIn = await _apiService.IsLoggedInAsync();
+        if (!loggedIn)
+        {
+            // 导航到登录页
+            await _navigationService.NavigateToAsync("login");
+            return;
+        }
+
         if (reply == null)
         {
             ErrorMessage = "回帖信息无效";
@@ -651,6 +911,15 @@ public partial class ThreadContentViewModel : ObservableObject
     [RelayCommand]
     public async Task OpenReplyThreadAsync()
     {
+        // 验证登录
+        var loggedIn = await _apiService.IsLoggedInAsync();
+        if (!loggedIn)
+        {
+            // 导航到登录页
+            await _navigationService.NavigateToAsync("login");
+            return;
+        }
+
         if (string.IsNullOrEmpty(_currentThreadId))
         {
             ErrorMessage = "无法打开回帖窗口：thread ID 未设置";
@@ -685,6 +954,15 @@ public partial class ThreadContentViewModel : ObservableObject
     [RelayCommand]
     public async Task OpenReplyCommentAsync(ReplyInfo comment)
     {
+        // 验证登录
+        var loggedIn = await _apiService.IsLoggedInAsync();
+        if (!loggedIn)
+        {
+            // 导航到登录页
+            await _navigationService.NavigateToAsync("login");
+            return;
+        }
+
         if (comment == null)
         {
             ErrorMessage = "评论信息无效";
@@ -740,6 +1018,15 @@ public partial class ThreadContentViewModel : ObservableObject
     [RelayCommand]
     public async Task OpenCommentAsync(ReplyInfo reply)
     {
+        // 验证登录
+        var loggedIn = await _apiService.IsLoggedInAsync();
+        if (!loggedIn)
+        {
+            // 导航到登录页
+            await _navigationService.NavigateToAsync("login");
+            return;
+        }
+
         if (reply == null)
         {
             ErrorMessage = "回帖信息无效";

@@ -11,12 +11,16 @@
     <ContentPage.Resources>
         <ResourceDictionary>
             <Style x:Key="BottomNaviButtonStyle" TargetType="Button">
-                <Setter Property="BackgroundColor" Value="DodgerBlue"/>
-                <Setter Property="TextColor" Value="White"/>
-                <Setter Property="CornerRadius" Value="0"/>
+                <Setter Property="BackgroundColor" Value="Transparent"/>
+                <Setter Property="TextColor" Value="{AppThemeBinding Light=Black, Dark=White}"/>
+                <Setter Property="CornerRadius" Value="50"/>
+                <Setter Property="BorderWidth" Value="2"/>
+                <Setter Property="BorderColor" Value="LightBlue"/>
                 <Setter Property="Padding" Value="0"/>
-                <Setter Property="HeightRequest" Value="40"/>
-                <Setter Property="VisualStateManager.VisualStateGroups">
+                <Setter Property="HeightRequest" Value="50"/>
+                <Setter Property="WidthRequest" Value="50"/>
+<!--
+                                <Setter Property="VisualStateManager.VisualStateGroups">
                     <VisualStateGroupList>
                         <VisualStateGroup Name="CommonStates">
                             <VisualState Name="Normal">
@@ -37,15 +41,22 @@
                         </VisualStateGroup>
                     </VisualStateGroupList>
                 </Setter>
+                -->
             </Style>
         </ResourceDictionary>
     </ContentPage.Resources>
 
-    <Grid RowDefinitions="50,*,60">
+    <Grid RowDefinitions="50,*,80" BackgroundColor="{AppThemeBinding Light=#F6F8FC, Dark=#151A24}">
 
-        <Grid ColumnDefinitions="180,*" Padding="15,0">
-            <Image Source="pcbeta_logo_full.png" HeightRequest="50" HorizontalOptions="Start"/>
-            <Label Text="远景论坛 - 前沿科技与智慧生态的极客社区" HorizontalOptions="Start" VerticalOptions="End" FontAttributes="Bold" FontSize="16" Margin="0,0,0,5" Grid.Column="1"/>
+        <Grid ColumnDefinitions="180,*" Padding="18,0" BackgroundColor="{AppThemeBinding Light=White, Dark=#202938}">
+
+            <Button Style="{StaticResource BottomNaviButtonStyle}" HeightRequest="45" WidthRequest="45" CornerRadius="5" Command="{Binding OpenMenuCommand}" HorizontalOptions="Start" Margin="-10,0,0,0" IsVisible="{OnPlatform Android=True, Default=False}">
+                <Button.ImageSource>
+                    <FontImageSource Glyph="&#xe700;" Size="Medium" Color="{AppThemeBinding Light=Black, Dark=White}" FontFamily="Segoe Fluent Icons"/>
+                </Button.ImageSource>
+            </Button>
+            <Image Source="{OnPlatform 'pcbeta_logo_full.png', Android='pcbeta_logo_threadicon.png'}" Margin="{OnPlatform Android='45,0,0,0'}" HeightRequest="50" HorizontalOptions="Start"/>
+            <Label Text="远景论坛 - 前沿科技与智慧生态的极客社区" HorizontalOptions="Start" VerticalOptions="Center" FontAttributes="Bold" FontSize="16" Margin="0" Grid.Column="1" TextColor="{AppThemeBinding Light=#1E293B, Dark=White}"/>
         </Grid>
 
         <!-- 加载指示器 -->
@@ -66,8 +77,8 @@
                IsVisible="{Binding ErrorMessage, Converter={StaticResource StringNotNullToBoolConverter}}"/>-->
 
         <!-- 论坛分类和板块列表 -->
-        <ScrollView Grid.Row="1">
-            <VerticalStackLayout Padding="0" Spacing="0">
+        <ScrollView Grid.Row="1" BackgroundColor="{AppThemeBinding Light=White, Dark=#1E1E1E}">
+            <VerticalStackLayout Padding="12,8" Spacing="4" BackgroundColor="{AppThemeBinding Light=#F6F8FC, Dark=#151A24}">
                 <!-- 使用 CollectionView 遍历分类 -->
                 <CollectionView ItemsSource="{Binding ForumCategories}"
                                 SelectionMode="None">
@@ -81,17 +92,16 @@
                             <VerticalStackLayout Spacing="0" Padding="0">
 
                                 <!-- 分类标题 - 可点击展开/收回 -->
-                                <Grid ColumnDefinitions="*,40" Padding="15,12" BackgroundColor="#F0F7FF" 
-                                      Margin="0,8,0,0">
+                                <Grid ColumnDefinitions="*,40" Padding="18,14" BackgroundColor="{AppThemeBinding Light=#EAF2FF, Dark=#243653}" Margin="0,8,0,0">
                                     <Label Text="{Binding CategoryName}" 
                                            FontSize="15" 
                                            FontAttributes="Bold"
-                                           TextColor="#1985DB"
+                                           TextColor="{AppThemeBinding Light=#1985DB, Dark=#5DADE2}"
                                            VerticalOptions="Center"/>
                                     <Label Grid.Column="1"
                                            Text="{Binding IsExpanded, Converter={StaticResource ExpandedToSymbolConverter}}"
                                            FontSize="24"
-                                           TextColor="#1985DB"
+                                           TextColor="{AppThemeBinding Light=#1985DB, Dark=#5DADE2}"
                                            HorizontalOptions="End"
                                            VerticalOptions="Center"
                                            Margin="0,0,10,0"/>
@@ -110,16 +120,16 @@
                                                      IsVisible="{Binding IsExpanded}">
                                     <BindableLayout.ItemTemplate>
                                         <DataTemplate>
-                                            <Frame Padding="15" CornerRadius="8" BorderColor="#E0E0E0" 
-                                                   HasShadow="True" Margin="10,0">
+                                             <Frame Padding="16" CornerRadius="14" Margin="4,0" BorderColor="{AppThemeBinding Light=#E2E8F0, Dark=#334155}" BackgroundColor="{AppThemeBinding Light=White, Dark=#202938}">
 
                                                 <!-- 使用 TapGestureRecognizer 处理板块点击 -->
                                                 <Frame.GestureRecognizers>
                                                     <TapGestureRecognizer Tapped="OnForumTapped" CommandParameter="{Binding .}"/>
+                                                     <PointerGestureRecognizer PointerEntered="OnForumPointerEntered" PointerExited="OnForumPointerExited"/>
                                                 </Frame.GestureRecognizers>
 
                                                 <Grid ColumnDefinitions="100,*">
-                                                    <Image HeightRequest="48" Source="{Binding LogoUrl}"/>
+                                                     <Image HeightRequest="48" Source="{Binding LogoSource}"/>
                                                     <VerticalStackLayout Spacing="8" Grid.Column="1">
                                                         <!-- 板块名称和今日新帖 - 横向排列 -->
                                                         <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
@@ -127,6 +137,7 @@
                                                                 <Label Text="{Binding Name}" 
                                                                FontSize="14" 
                                                                FontAttributes="Bold"
+                                                               TextColor="{AppThemeBinding Light=Black, Dark=White}"
                                                                VerticalOptions="Center"/>
                                                                 <Label Text="{Binding TodayNewPosts, StringFormat='({0})'}" 
                                                                FontSize="12"
@@ -138,23 +149,23 @@
                                                             <Label Text="{Binding LastReply}" 
                                                                Grid.Column="1" 
                                                                FontSize="11" IsVisible="{OnPlatform Android=False}"
-                                                              />
+                                                               TextColor="{AppThemeBinding Light=Gray, Dark=#B0B0B0}"/>
                                                         </Grid>
 
                                                         <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
                                                             <Label Text="{Binding ThreadCount, StringFormat='主题: {0}'}" 
                                                                FontSize="11"
-                                                               TextColor="Gray"/>
+                                                               TextColor="{AppThemeBinding Light=Gray, Dark=#B0B0B0}"/>
                                                             <Label Text="{Binding PostCount, StringFormat='帖数: {0}'}" 
                                                                Grid.Column="1" 
                                                                FontSize="11"
-                                                               TextColor="Gray"/>
+                                                               TextColor="{AppThemeBinding Light=Gray, Dark=#B0B0B0}"/>
                                                         </Grid>
 
                                                         <Label Text="{Binding LastReply}" 
                                                    Grid.Column="1" 
                                                    FontSize="11" IsVisible="{OnPlatform False,Android=True}"
-                                                  />
+                                                   TextColor="{AppThemeBinding Light=Gray, Dark=#B0B0B0}"/>
                                                     </VerticalStackLayout>
                                                 </Grid>
                                             </Frame>
@@ -169,18 +180,31 @@
         </ScrollView>
 
         <!-- 底部导航 -->
-        <Grid Grid.Row="2" ColumnDefinitions="*,*,*" ColumnSpacing="0">
-            <Button Text="刷新" 
-                    Command="{Binding RefreshCommand}"
-                    Style="{StaticResource BottomNaviButtonStyle}" Margin="2,0" VerticalOptions="End"/>
-            <Button Text="发现" 
-                    Command="{Binding SearchCommand}"
-                    Style="{StaticResource BottomNaviButtonStyle}" Margin="2,0" VerticalOptions="End"
-                    Grid.Column="1"/>
-            <Button Text="我的" 
-                    Command="{Binding MyCommand}"
-                    Style="{StaticResource BottomNaviButtonStyle}" Margin="2,0" VerticalOptions="End"
-                    Grid.Column="2"/>
+        <Grid Grid.Row="2" ColumnDefinitions="*,*,*" BackgroundColor="{AppThemeBinding Light=#F6F8FC, Dark=#202938}" Padding="0,5">
+            <StackLayout>
+                <Button Command="{Binding RefreshCommand}" Style="{StaticResource BottomNaviButtonStyle}" >
+                    <Button.ImageSource>
+                        <FontImageSource Glyph="&#xE72c;" Size="Medium" Color="{AppThemeBinding Light=Black, Dark=White}" FontFamily="Segoe Fluent Icons"/>
+                    </Button.ImageSource>
+                </Button>
+                <Label Text="刷新" HorizontalOptions="Center" FontSize="12" TextColor="{AppThemeBinding Light=Black, Dark=White}"/>
+            </StackLayout>
+            <StackLayout Grid.Column="1">
+                <Button Command="{Binding SearchCommand}" Style="{StaticResource BottomNaviButtonStyle}">
+                    <Button.ImageSource>
+                        <FontImageSource Glyph="&#xF0e2;" Size="Medium" Color="{AppThemeBinding Light=Black, Dark=White}" FontFamily="Segoe Fluent Icons"/>
+                    </Button.ImageSource>
+                </Button>
+                <Label Text="发现" HorizontalOptions="Center" FontSize="12" TextColor="{AppThemeBinding Light=Black, Dark=White}"/>
+            </StackLayout>
+            <StackLayout Grid.Column="2">
+                <Button Command="{Binding MyCommand}" Style="{StaticResource BottomNaviButtonStyle}">
+                    <Button.ImageSource>
+                        <FontImageSource Glyph="&#xE77b;" Size="Medium" Color="{AppThemeBinding Light=Black, Dark=White}" FontFamily="Segoe Fluent Icons"/>
+                    </Button.ImageSource>
+                </Button>
+                <Label Text="我的" HorizontalOptions="Center" FontSize="12" TextColor="{AppThemeBinding Light=Black, Dark=White}"/>
+            </StackLayout>
         </Grid>
     </Grid>
 </ContentPage>
