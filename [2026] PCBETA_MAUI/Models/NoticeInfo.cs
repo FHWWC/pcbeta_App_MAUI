@@ -1,3 +1,6 @@
+using System.Text.Json.Serialization;
+using Microsoft.Maui.Controls;
+
 namespace PCBetaMAUI.Models;
 
 /// <summary>
@@ -15,6 +18,9 @@ public class NoticeInfo
     /// 用户头像URL
     /// </summary>
     public string AvatarUrl { get; set; } = string.Empty;
+
+    [JsonIgnore]
+    public ImageSource? AvatarSource { get; set; }
     /// <summary>
     /// 用户名
     /// </summary>

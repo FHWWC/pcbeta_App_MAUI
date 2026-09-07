@@ -1,3 +1,6 @@
+using System.Text.Json.Serialization;
+using Microsoft.Maui.Controls;
+
 namespace PCBetaMAUI.Models;
 
 /// <summary>
@@ -15,6 +18,9 @@ public class RatingInfo
     /// 评分者头像URL
     /// </summary>
     public string AvatarUrl { get; set; } = string.Empty;
+
+    [JsonIgnore]
+    public ImageSource? AvatarSource { get; set; }
 
     /// <summary>
     /// 评分内容（简短版本，如"PB币 + 1"或"技术 + 1, PB币 + 60"）

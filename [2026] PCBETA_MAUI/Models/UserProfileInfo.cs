@@ -1,4 +1,5 @@
 using CommunityToolkit.Mvvm.ComponentModel;
+using Microsoft.Maui.Controls;
 using System.Collections.ObjectModel;
 using System.Text.Json.Serialization;
 
@@ -18,6 +19,9 @@ public class UserProfileInfo
 
     [JsonPropertyName("avatarUrl")]
     public string AvatarUrl { get; set; } = string.Empty;
+
+    [JsonIgnore]
+    public ImageSource? AvatarSource { get; set; }
 
     // 账户信息
     [JsonPropertyName("spacePV")]
@@ -105,6 +109,9 @@ public class Medal
 
     [JsonPropertyName("imageUrl")]
     public string ImageUrl { get; set; } = string.Empty;
+
+    [JsonIgnore]
+    public ImageSource? ImageSource { get; set; }
 
     [JsonPropertyName("description")]
     public string Description { get; set; } = string.Empty;

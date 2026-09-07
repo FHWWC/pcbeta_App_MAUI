@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
 using CommunityToolkit.Mvvm.ComponentModel;
+using Microsoft.Maui.Controls;
 
 namespace PCBetaMAUI.Models;
 
@@ -54,6 +55,9 @@ public class ForumSection
     [JsonPropertyName("logoUrl")]
     public string? LogoUrl { get; set; }
 
+    [JsonIgnore]
+    public ImageSource? LogoSource { get; set; }
+
     [JsonPropertyName("todayNewPosts")]
     public string? TodayNewPosts { get; set; }
     [JsonPropertyName("lastReply")]
@@ -71,10 +75,40 @@ public class ThreadInfo
     public int Views { get; set; }
     public string Category { get; set; } = string.Empty;
 
+    public bool IsReply { get; set; }
+
+    public List<string> CommentContents { get; set; } = new();
+
     /// <summary>
     /// 是否为置顶帖（true = 置顶帖，false = 普通帖子）
     /// </summary>
     public bool IsSticky { get; set; } = false;
+
+    /// <summary>
+    /// 新增：帖子图标列表（如锁、投票、悬赏、辩论等），按解析顺序保留。
+    /// 每个图标使用字符串表示（可为 emoji 或文本），支持多个图标同时存在。
+    /// </summary>
+    public List<string> Icons { get; set; } = new();
+
+    /// <summary>
+    /// 新增：阅读权限信息（示例："[阅读权限 10]"），默认空字符串表示无特殊阅读权限。
+    /// 从帖子 HTML 中提取 <span class=\"xw1\">数字</span> 并封装为上例格式。
+    /// </summary>
+    public string ReadPrem { get; set; } = string.Empty;
+
+    /// <summary>
+    /// 新增：帖子印章图片URL（例如：static/image/stamp/002.small.gif），若为相对路径则拼接 ApiService.BaseUrl
+    /// 默认值为空字符串
+    /// </summary>
+    public string StampUrl { get; set; } = string.Empty;
+
+    [JsonIgnore]
+    public ImageSource? StampSource { get; set; }
+
+    /// <summary>
+    /// 新增：回帖奖励信息（例如："还剩564PB币"），为空字符串表示无回帖奖励
+    /// </summary>
+    public string Replycredit { get; set; } = string.Empty;
 }
 
 public class SearchThreadInfo
@@ -197,6 +231,30 @@ public class PaginationInfo
     /// ��ҳ��
     /// </summary>
     public int TotalPages { get; set; } = 1;
+
+}
+
+public class PollInfo
+{
+    public string FormHash { get; set; } = string.Empty;
+    public string SubmitUrl { get; set; } = string.Empty;
+    public string Summary { get; set; } = string.Empty;
+    public string Notice { get; set; } = string.Empty;
+    public string EndTimeText { get; set; } = string.Empty;
+    public bool IsMultiple { get; set; }
+    public int MaxChoices { get; set; }
+    public bool CanVote { get; set; }
+    public List<PollOption> Options { get; set; } = new();
+}
+
+public class PollOption
+{
+    public string Id { get; set; } = string.Empty;
+    public string Text { get; set; } = string.Empty;
+    public string? ImageUrl { get; set; }
+    public int VoteCount { get; set; }
+    public double Percentage { get; set; }
+    public bool IsSelected { get; set; }
 }
 
 /// <summary>
@@ -276,6 +334,17 @@ public class ThreadContent
     public string? EditOpUrl { get; set; }
 
     /// <summary>
+    /// 楼主发帖的回帖奖励内容，为空时表示没有回帖奖励。
+    /// </summary>
+    public string ReplyRewardText { get; set; } = string.Empty;
+
+    /// <summary>
+    /// ✅ 新增：论坛版块ID（从快速回复区域的高级模式链接中提取）
+    /// 用于备用标识当前所在的论坛版块
+    /// </summary>
+    public string? ForumId { get; set; }
+
+    /// <summary>
     /// ��������ǰҳ�루��ҳ���ܣ�
     /// Ĭ��Ϊ 1����ʾ��һҳ
     /// </summary>
@@ -286,6 +355,8 @@ public class ThreadContent
     /// Ĭ��Ϊ 1����ʾֻ��һҳ
     /// </summary>
     public int TotalPages { get; set; } = 1;
+
+    public PollInfo? Poll { get; set; }
 }
 
 /// <summary>
@@ -309,6 +380,9 @@ public class ReplyInfo
     /// <summary>回帖者头像URL</summary>
     public string? AvatarUrl { get; set; }
 
+    [JsonIgnore]
+    public ImageSource? AvatarSource { get; set; }
+
     /// <summary>回帖者个人空间链�?/summary>
     public string? ProfileUrl { get; set; }
 
@@ -317,6 +391,11 @@ public class ReplyInfo
 
     /// <summary>回帖者IP属地（例如："北京"�?/summary>
     public string? IPLocation { get; set; }
+
+    /// <summary>
+    /// 当前楼层的回帖奖励内容，为空时表示没有回帖奖励。
+    /// </summary>
+    public string ReplyRewardText { get; set; } = string.Empty;
 
     /// <summary>回帖纯文本内容（简化版�?/summary>
     public string PlainTextContent { get; set; } = string.Empty;

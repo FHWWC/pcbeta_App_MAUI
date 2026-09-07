@@ -1,3 +1,6 @@
+using System.Text.Json.Serialization;
+using Microsoft.Maui.Controls;
+
 namespace PCBetaMAUI.Models;
 
 /// <summary>
@@ -21,6 +24,9 @@ public class CommentInfo
     /// 评论者头像URL
     /// </summary>
     public string AvatarUrl { get; set; } = string.Empty;
+
+    [JsonIgnore]
+    public ImageSource? AvatarSource { get; set; }
 
     /// <summary>
     /// 评论内容
