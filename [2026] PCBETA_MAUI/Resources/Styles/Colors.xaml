@@ -27,6 +27,17 @@
     <Color x:Key="Gray900">#212121</Color>
     <Color x:Key="Gray950">#141414</Color>
 
+    <Color x:Key="BrandBlue">#2563EB</Color>
+    <Color x:Key="BrandBlueDark">#60A5FA</Color>
+    <Color x:Key="PageBackground">#F6F8FC</Color>
+    <Color x:Key="PageBackgroundDark">#151A24</Color>
+    <Color x:Key="CardBackground">#FFFFFF</Color>
+    <Color x:Key="CardBackgroundDark">#202938</Color>
+    <Color x:Key="MutedText">#64748B</Color>
+    <Color x:Key="MutedTextDark">#A8B3C4</Color>
+    <Color x:Key="Divider">#E2E8F0</Color>
+    <Color x:Key="DividerDark">#334155</Color>
+
     <SolidColorBrush x:Key="PrimaryBrush" Color="{StaticResource Primary}"/>
     <SolidColorBrush x:Key="SecondaryBrush" Color="{StaticResource Secondary}"/>
     <SolidColorBrush x:Key="TertiaryBrush" Color="{StaticResource Tertiary}"/>
