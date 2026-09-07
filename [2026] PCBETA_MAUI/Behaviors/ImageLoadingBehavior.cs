@@ -45,10 +45,9 @@ namespace PCBetaMAUI.Behaviors
                             var cts = new System.Threading.CancellationTokenSource(TimeSpan.FromSeconds(3));
 
                             // 尝试访问网络资源
-                            using (var client = new HttpClient())
+                            using (var response = await Services.HttpClientManager.Instance.GetAsync(uriImageSource.Uri.ToString()))
                             {
-                                var request = new HttpRequestMessage(HttpMethod.Head, uriImageSource.Uri);
-                                await client.SendAsync(request, cts.Token);
+                                response.EnsureSuccessStatusCode();
                             }
                         }
                         catch (Exception ex)

@@ -54,11 +54,13 @@ public class ReplyContentRenderBehavior : Behavior<VerticalStackLayout>
                 Debug.WriteLine($"🎨 动态渲染回帖内容: {replyInfo.ContentElements.Count} 个元素");
 
                 // 创建一个新的容器用于放置动态渲染的内容
+                var isDarkMode = Application.Current?.RequestedTheme == AppTheme.Dark;
                 var dynamicContainer = new VerticalStackLayout
                 {
                     Spacing = 5,
                     Padding = new Thickness(0, 8, 0, 0),
-                    ClassId = "reply_dynamic_content"  // 标记为动态内容，便于清理
+                    ClassId = "reply_dynamic_content",  // 标记为动态内容，便于清理
+                    BackgroundColor = isDarkMode ? Color.FromArgb("#1E1E1E") : Colors.White,
                 };
 
                 // 调用渲染器
