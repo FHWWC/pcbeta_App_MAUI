@@ -9,7 +9,7 @@ namespace PCBetaMAUI
     {
         private readonly PasswordSecurityService _passwordService;
         private readonly ApiService _apiService;
-
+        public DateTime CurrentVersion = DateTime.ParseExact("2026.09.06 20:00:00", "yyyy.MM.dd HH:mm:ss", System.Globalization.CultureInfo.InvariantCulture); // 当前版本发布日期
         public App()
         {
             InitializeComponent();
@@ -27,6 +27,7 @@ namespace PCBetaMAUI
             base.OnStart();
 
             // Check for saved credentials and attempt auto-login
+            Task.Run(CheckAppUpdate);
             await AttemptAutoLoginAsync();
         }
 
@@ -96,7 +97,7 @@ namespace PCBetaMAUI
                                     }
                                     else
                                     {
-                                        appShell.UserAvatar.Source = avatarUrl;
+                                        await SetUserAvatarFromUrlAsync(appShell.UserAvatar, avatarUrl);
                                     }
                                 }
                                 Debug.WriteLine($"Updated AppShell avatar: {avatarUrl}");
@@ -171,6 +172,52 @@ namespace PCBetaMAUI
                 Debug.WriteLine($"Auto-login error: {ex.Message}");
                 // If auto-login fails, continue to login page
             }
+        }
+
+        public async void CheckAppUpdate()
+        {
+            DateTime ServerVersion = DateTime.MinValue;
+
+            try
+            {
+                var getTime =await new HttpClient().GetStringAsync("https://pastebin.com/raw/fniE2z07");
+                bool convertResult = DateTime.TryParseExact(getTime.Trim(), "yyyy.MM.dd HH:mm:ss", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out ServerVersion);
+                if (!convertResult)
+                {
+                    Debug.WriteLine("服务器版本格式错误，无法解析");
+                    return;
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"检查更新异常: {ex.Message}");
+                return;
+            }
+
+            if (ServerVersion > CurrentVersion)
+            {
+                MainThread.BeginInvokeOnMainThread(async () =>
+                {
+                    if (Shell.Current?.CurrentPage != null)
+                    {
+#if ANDROID
+                        await Shell.Current.CurrentPage.DisplayAlertAsync("更新提示", $"检测到新版本，发布时间：{ServerVersion}，请前往GitHub页面下载最新APK。\nhttps://github.com/FHWWC/pcbeta_App_MAUI/releases", "确认");
+#else
+                        await Shell.Current.CurrentPage.DisplayAlertAsync("更新提示", $"检测到新版本，发布时间：{ServerVersion}，请在微软商店内进行更新。", "确认");
+#endif
+
+                    }
+                });
+            }
+        }
+
+        private static async Task SetUserAvatarFromUrlAsync(Microsoft.Maui.Controls.Image image, string avatarUrl)
+        {
+            var imageSource = await ImageDataLoader.LoadAsync(avatarUrl);
+            await MainThread.InvokeOnMainThreadAsync(() =>
+            {
+                image.Source = imageSource ?? ImageSource.FromFile("defalut_avatar_big.png");
+            });
         }
     }
 }

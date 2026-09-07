@@ -4,11 +4,13 @@
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:local="clr-namespace:PCBetaMAUI"
+    xmlns:converters="clr-namespace:PCBetaMAUI.Converters"
     xmlns:views="clr-namespace:PCBetaMAUI.Views"
-    Title="PCBetaMAUI">
+    Title="PCBeta App">
 
     <Shell.Resources>
         <ResourceDictionary>
+            <converters:StringNotEmptyToBoolConverter x:Key="StringNotEmptyToBoolConverter" />
             <Style x:Key="BottomNaviButtonStyle" TargetType="Button">
                 <Setter Property="BackgroundColor" Value="DodgerBlue"/>
                 <Setter Property="TextColor" Value="White"/>
@@ -68,10 +70,24 @@
     </Shell.Resources>
     
     <Shell.FlyoutHeader>
-        <VerticalStackLayout Padding="0,10,0,20">
-            <Image x:Name="UserAvatar" Source="defalut_avatar_big.png" HeightRequest="180" x:FieldModifier="Public"/>
+        <VerticalStackLayout Padding="0,10,0,20" BackgroundColor="{AppThemeBinding Light=#FAFAFA, Dark=#282828}">
+            <Border
+    HeightRequest="180"
+    WidthRequest="180"
+    Padding="0"
+    StrokeThickness="0"
+    StrokeShape="RoundRectangle 90">
+
+                <Image
+        x:Name="UserAvatar"
+        Source="defalut_avatar_big.png"
+        HeightRequest="180"
+        WidthRequest="180"
+        Aspect="AspectFill"
+        x:FieldModifier="Public" />
+            </Border>
             <HorizontalStackLayout HorizontalOptions="Center" Margin="0,10,0,0">
-                <Label x:Name="UserName" Text="欢迎您！游客，请登录" TextColor="DarkRed"  FontSize="18" x:FieldModifier="Public"/>
+                <Label x:Name="UserName" Text="欢迎您！游客，请登录" TextColor="{AppThemeBinding Light=DodgerBlue, Dark=White}"  FontSize="18" x:FieldModifier="Public"/>
             </HorizontalStackLayout>
             <Grid>
                 <Button x:Name="LoginButton" Text="登录" Style="{StaticResource MordenButtonStyle}" Margin="20,5" IsVisible="True" Clicked="OnLoginButtonClicked"/>
@@ -79,17 +95,61 @@
             </Grid>
         </VerticalStackLayout>
     </Shell.FlyoutHeader>
-    
+
     <ShellContent
         Title="论坛"
         ContentTemplate="{DataTemplate views:MainThreadPage}"
-        Route="mainthread" />
+        Route="mainthread" >
+        <ShellContent.Icon>
+            <FontImageSource
+            FontFamily="Segoe Fluent Icons"
+            Glyph="&#xE8BD;"
+            Size="Large"
+            Color="{AppThemeBinding Light=Black, Dark=White}" />
+        </ShellContent.Icon>
+    </ShellContent>
     
     <ShellContent
         Title="我的通知"
         ContentTemplate="{DataTemplate views:MyNoticePage}"
         Route="mynotice" 
-        IsVisible="{Binding IsMyNoticeVisible, Source={RelativeSource AncestorType={x:Type Shell}}}" />
+        IsVisible="{Binding IsMyNoticeVisible, Source={RelativeSource AncestorType={x:Type Shell}}}" >
+        <ShellContent.Icon>
+            <FontImageSource
+            FontFamily="Segoe Fluent Icons"
+            Glyph="&#xE7e7;"
+            Size="Large"
+            Color="{AppThemeBinding Light=Black, Dark=White}" />
+        </ShellContent.Icon>
+    </ShellContent>
+
+    <ShellContent
+        Title="我的收藏"
+        ContentTemplate="{DataTemplate views:MyFavoritePage}"
+        Route="myfavorite"
+        IsVisible="{Binding IsMyFavoriteVisible, Source={RelativeSource AncestorType={x:Type Shell}}}" >
+        <ShellContent.Icon>
+            <FontImageSource
+            FontFamily="Segoe Fluent Icons"
+            Glyph="&#xE728;"
+            Size="Large"
+            Color="{AppThemeBinding Light=Black, Dark=White}" />
+        </ShellContent.Icon>
+    </ShellContent>
+
+    <ShellContent
+        Title="我发布的"
+        ContentTemplate="{DataTemplate views:MyPostPage}"
+        Route="mypost"
+        IsVisible="{Binding IsMyPostVisible, Source={RelativeSource AncestorType={x:Type Shell}}}" >
+        <ShellContent.Icon>
+            <FontImageSource
+            FontFamily="Segoe Fluent Icons"
+            Glyph="&#xE7c3;"
+            Size="Large"
+            Color="{AppThemeBinding Light=Black, Dark=White}" />
+        </ShellContent.Icon>
+    </ShellContent>
     
     <ShellContent
         Title="帖子列表"

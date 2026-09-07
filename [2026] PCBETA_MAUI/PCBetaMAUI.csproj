@@ -38,22 +38,21 @@
 		<ApplicationVersion>1</ApplicationVersion>
 
 		<!-- To develop, package, and publish an app to the Microsoft Store, see: https://aka.ms/MauiTemplateUnpackaged -->
-		<WindowsPackageType>MSIX</WindowsPackageType>
+		<WindowsPackageType>None</WindowsPackageType>
 
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">15.0</SupportedOSPlatformVersion>
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst'">15.0</SupportedOSPlatformVersion>
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">21.0</SupportedOSPlatformVersion>
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</SupportedOSPlatformVersion>
 		<TargetPlatformMinVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</TargetPlatformMinVersion>
-		<DefaultLanguage>zh-CN</DefaultLanguage>
 		<GenerateAppInstallerFile>False</GenerateAppInstallerFile>
 		<AppxPackageSigningEnabled>False</AppxPackageSigningEnabled>
 		<AppxPackageSigningTimestampDigestAlgorithm>SHA256</AppxPackageSigningTimestampDigestAlgorithm>
 		<AppxAutoIncrementPackageRevision>True</AppxAutoIncrementPackageRevision>
 		<AppxSymbolPackageEnabled>False</AppxSymbolPackageEnabled>
 		<GenerateTestArtifacts>True</GenerateTestArtifacts>
-		<GenerateTemporaryStoreCertificate>True</GenerateTemporaryStoreCertificate>
 		<HoursBetweenUpdateChecks>0</HoursBetweenUpdateChecks>
+		<DefaultLanguage>zh-CN</DefaultLanguage>
 	</PropertyGroup>
 
 	<PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|net10.0-android|AnyCPU'">
@@ -72,7 +71,8 @@
 
 		<!-- Images -->
 		<MauiImage Include="Resources\Images\*" />
-		
+    <MauiImage Include="Resources\AppIcon\pcbeta_logo.png" />
+    
 		<!-- Custom Fonts -->
 		<MauiFont Include="Resources\Fonts\*" />
 
@@ -81,24 +81,12 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <None Remove="Resources\win_app\%24placeholder%24.scale-400.png" />
-	  <None Remove="Resources\win_app\BadgeLogo.scale-400.png" />
-	  <None Remove="Resources\win_app\logo.scale-100.png" />
-	  <None Remove="Resources\win_app\logo.scale-125.png" />
-	  <None Remove="Resources\win_app\logo.scale-150.png" />
-	  <None Remove="Resources\win_app\logo.scale-200.png" />
-	  <None Remove="Resources\win_app\logo.scale-400.png" />
-	</ItemGroup>
-
-	<ItemGroup>
-	  <Content Include="Resources\Images\pcbeta_logo_full.png" />
-	  <Content Include="Resources\win_app\$placeholder$.scale-400.png" />
-	  <Content Include="Resources\win_app\BadgeLogo.scale-400.png" />
-	  <Content Include="Resources\win_app\logo.scale-100.png" />
-	  <Content Include="Resources\win_app\logo.scale-125.png" />
-	  <Content Include="Resources\win_app\logo.scale-150.png" />
-	  <Content Include="Resources\win_app\logo.scale-200.png" />
-	  <Content Include="Resources\win_app\logo.scale-400.png" />
+	  <AndroidResource Remove="Doc\**" />
+	  <Compile Remove="Doc\**" />
+	  <EmbeddedResource Remove="Doc\**" />
+	  <MauiCss Remove="Doc\**" />
+	  <MauiXaml Remove="Doc\**" />
+	  <None Remove="Doc\**" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -109,82 +97,49 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <None Include=".github\API-Extension-SubmitEditOPReply.md" />
-	  <None Include=".github\blockquote-br-improvement.md" />
-	  <None Include=".github\blockquote-delivery-checklist.md" />
-	  <None Include=".github\blockquote-final-report.md" />
-	  <None Include=".github\blockquote-implementation-summary.md" />
-	  <None Include=".github\blockquote-parsing-validation.md" />
-	  <None Include=".github\blockquote-quick-reference.md" />
-	  <None Include=".github\blockquote-test-cases.md" />
-	  <None Include=".github\copilot-instructions.md" />
-	  <None Include=".github\DisplayAlert-Usage-Guide.md" />
-	  <None Include=".github\EditButton-Implementation-Summary.md" />
-	  <None Include=".github\EditOPPost-Implementation-Complete.md" />
-	  <None Include=".github\EditOPReply-Final-Summary.md" />
-	  <None Include=".github\EditOPReply-Implementation-Checklist.md" />
-	  <None Include=".github\EditOPReply-Quick-Reference.md" />
-	  <None Include=".github\EditOPReply-Summary.md" />
-	  <None Include=".github\EditReply-File-Manifest.md" />
-	  <None Include=".github\EditReply-Implementation-Summary.md" />
-	  <None Include=".github\EditReply-Quick-Reference.md" />
-	  <None Include=".github\EditReply-Verification-Checklist.md" />
-	  <None Include=".github\fg_533_quick_reference.md" />
-	  <None Include=".github\fg_533_support.md" />
-	  <None Include=".github\InternalLinkNavigation-Implementation.md" />
-	  <None Include=".github\InternalLinkNavigation-QuickRef.md" />
-	  <None Include=".github\InternalLinkNavigation-Summary.md" />
-	  <None Include=".github\InternalLinkNavigation-TestCases.md" />
-	  <None Include=".github\MainThreadPage-ExpandCollapse-Implementation.md" />
-	  <None Include=".github\MainThreadPage-ExpandCollapse-QuickRef.md" />
-	  <None Include=".github\MyNoticePage-Implementation.md" />
-	  <None Include=".github\MyNoticePage-QuickRef.md" />
-	  <None Include=".github\MyProfilePage-Implementation.md" />
-	  <None Include=".github\PostNewThread-10-Parameters-Implementation.md" />
-	  <None Include=".github\PostNewThread-API-Implementation.md" />
-	  <None Include=".github\PostNewThread-Attachment-UI-Completion.md" />
-	  <None Include=".github\PostNewThread-Attachment-UI-Final-Report.md" />
-	  <None Include=".github\PostNewThread-Attachment-UI-Quick-Ref.md" />
-	  <None Include=".github\PostNewThread-Complete-Summary.md" />
-	  <None Include=".github\PostNewThread-Extra-Parameters-Integration.md" />
-	  <None Include=".github\PostNewThread-Final-Report.md" />
-	  <None Include=".github\PostNewThread-Implementation-Checklist.md" />
-	  <None Include=".github\PostNewThread-Implementation.md" />
-	  <None Include=".github\PostNewThread-Quick-Reference.md" />
-	  <None Include=".github\PostNewThread-TypeId-Dynamic-Support.md" />
-	  <None Include=".github\PostNewThread-TypeId-Implementation-Checklist.md" />
-	  <None Include=".github\PostNewThread-TypeId-Quick-Reference.md" />
-	  <None Include=".github\Quote-Blockquote-Implementation-Guide.md" />
+		<Content Include="Resources\Images\pcbeta_logo_full.png" />
+		<Content Include="Resources\win_app\$placeholder$.scale-400.png" />
+		<Content Include="Resources\win_app\BadgeLogo.scale-400.png" />
+		<Content Include="Resources\win_app\logo.scale-100.png" />
+		<Content Include="Resources\win_app\logo.scale-125.png" />
+		<Content Include="Resources\win_app\logo.scale-150.png" />
+		<Content Include="Resources\win_app\logo.scale-200.png" />
+		<Content Include="Resources\win_app\logo.scale-400.png" />
 	</ItemGroup>
-
+	
 	<ItemGroup>
 	  <Folder Include="Tests\" />
 	</ItemGroup>
 
 	<ItemGroup>
-	  <MauiImage Include="Resources\AppIcon\pcbeta_logo.png" />
+	  <None Include=".github\copilot-instructions.md" />
+	  <None Include=".github\GifAutoplay-CHANGELOG.md" />
+	  <None Include=".github\GifAutoplay-Implementation-Complete.md" />
+	  <None Include=".github\GifAutoplay-QuickRef.md" />
+	  <None Include=".github\GifAutoplay-Summary.md" />
+	  <None Include=".github\GifAutoplay-TestingChecklist.md" />
+	  <None Include=".github\ImageVirtualization-Implementation.md" />
+	  <None Include=".github\ImageVirtualization-LayoutSpace-Fix.md" />
+	  <None Include=".github\ImageVirtualization-QuickTest.md" />
+	  <None Include=".github\ThreadCategory-Dynamic-Extract-BeforeAfter.md" />
+	  <None Include=".github\ThreadCategory-Dynamic-Extract-Checklist.md" />
+	  <None Include=".github\ThreadCategory-Dynamic-Extract-Completion.md" />
+	  <None Include=".github\ThreadCategory-Dynamic-Extract-CompletionNotice.md" />
+	  <None Include=".github\ThreadCategory-Dynamic-Extract-DeliveryReport.md" />
+	  <None Include=".github\ThreadCategory-Dynamic-Extract-Implementation.md" />
+	  <None Include=".github\ThreadCategory-Dynamic-Extract-Index.md" />
+	  <None Include=".github\ThreadCategory-Dynamic-Extract-Overview.md" />
+	  <None Include=".github\ThreadCategory-Dynamic-Extract-QuickRef.md" />
 	</ItemGroup>
 
 	<ItemGroup>
-	  <MauiXaml Update="Views\EditOPReplyPage.xaml">
+	  <MauiXaml Update="Views\ImageViewerPage.xaml">
 	    <Generator>MSBuild:Compile</Generator>
 	  </MauiXaml>
-	  <MauiXaml Update="Views\EditReplyPage.xaml">
+	  <MauiXaml Update="Views\MyFavoritePage.xaml">
 	    <Generator>MSBuild:Compile</Generator>
 	  </MauiXaml>
-	  <MauiXaml Update="Views\MyNoticePage.xaml">
-	    <Generator>MSBuild:Compile</Generator>
-	  </MauiXaml>
-	  <MauiXaml Update="Views\MyProfilePage.xaml">
-	    <Generator>MSBuild:Compile</Generator>
-	  </MauiXaml>
-	  <MauiXaml Update="Views\PostNewThreadPage.xaml">
-	    <Generator>MSBuild:Compile</Generator>
-	  </MauiXaml>
-	  <MauiXaml Update="Views\ReplyThreadPage.xaml">
-	    <Generator>MSBuild:Compile</Generator>
-	  </MauiXaml>
-	  <MauiXaml Update="Views\SearchPage.xaml">
+	  <MauiXaml Update="Views\MyPostPage.xaml">
 	    <Generator>MSBuild:Compile</Generator>
 	  </MauiXaml>
 	</ItemGroup>

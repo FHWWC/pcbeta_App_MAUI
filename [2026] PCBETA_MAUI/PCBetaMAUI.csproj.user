@@ -15,9 +15,10 @@
     <LargeTileSource>D:\VS 2015-19 Project\PCBetaMAUI\Resources\AppIcon\pcbeta_logo.png</LargeTileSource>
     <SplashScreenSource>D:\VS 2015-19 Project\PCBetaMAUI\Resources\AppIcon\pcbeta_logo.png</SplashScreenSource>
     <UapAppxPackageBuildMode>StoreAndSideload</UapAppxPackageBuildMode>
-    <AppxShowAllApps>False</AppxShowAllApps>
+    <AppxShowAllApps>True</AppxShowAllApps>
     <_LastSelectedProfileId>MSIX-win-x86.pubxml</_LastSelectedProfileId>
     <PackageOptionalProjectsInIdeBuilds>False</PackageOptionalProjectsInIdeBuilds>
+    <DefaultDevice>pico_-_api_36</DefaultDevice>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net10.0-android|AnyCPU'">
     <DebuggerFlavor>ProjectDebugger</DebuggerFlavor>

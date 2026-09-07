@@ -20,6 +20,7 @@
             <conv:ExpandedToSymbolConverter x:Key="ExpandedToSymbolConverter"/>
             <conv:RatingValueToColorConverter x:Key="ValueToColorConverter"/>
             <conv:InvertedBoolConverter x:Key="InvertedBoolConverter"/>
+            <conv:PercentageToProgressConverter x:Key="PercentageToProgressConverter"/>
         </ResourceDictionary>
     </Application.Resources>
 </Application>

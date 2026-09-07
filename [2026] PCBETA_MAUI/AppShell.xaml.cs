@@ -2,6 +2,7 @@
 using PCBetaMAUI.Services;
 using System.Diagnostics;
 using System.ComponentModel;
+using PCBetaMAUI.Converters; // Moved converter class into Converters namespace
 
 namespace PCBetaMAUI
 {
@@ -10,6 +11,8 @@ namespace PCBetaMAUI
         private bool _isLoggedIn = false;
         private string? _logoutUrl;
         private bool _isMyNoticeVisible = false;
+        private bool _isMyFavoriteVisible = false;
+        private bool _isMyPostVisible = false;
 
         public bool IsLoggedIn
         {
@@ -20,6 +23,8 @@ namespace PCBetaMAUI
                 {
                     _isLoggedIn = value;
                     IsMyNoticeVisible = value;  // 同步更新我的通知可见性
+                    IsMyFavoriteVisible = value; // 同步更新我的收藏可见性
+                    IsMyPostVisible=value;
                     UpdateLoginUI();
                 }
             }
@@ -34,6 +39,32 @@ namespace PCBetaMAUI
                 {
                     _isMyNoticeVisible = value;
                     OnPropertyChanged(nameof(IsMyNoticeVisible));
+                }
+            }
+        }
+
+        public bool IsMyFavoriteVisible
+        {
+            get => _isMyFavoriteVisible;
+            set
+            {
+                if (_isMyFavoriteVisible != value)
+                {
+                    _isMyFavoriteVisible = value;
+                    OnPropertyChanged(nameof(IsMyFavoriteVisible));
+                }
+            }
+        }
+
+        public bool IsMyPostVisible
+        {
+            get => _isMyPostVisible;
+            set
+            {
+                if (_isMyPostVisible != value)
+                {
+                    _isMyPostVisible = value;
+                    OnPropertyChanged(nameof(IsMyPostVisible));
                 }
             }
         }
@@ -58,6 +89,8 @@ namespace PCBetaMAUI
             Routing.RegisterRoute("editreply", typeof(EditReplyPage));
             Routing.RegisterRoute("editopreply", typeof(EditOPReplyPage));
             Routing.RegisterRoute("mynotice", typeof(MyNoticePage));  // ✅ 新增：注册我的通知页面路由
+            Routing.RegisterRoute("myfavorite", typeof(MyFavoritePage)); // ✅ 新增：注册我的收藏页面路由
+            Routing.RegisterRoute("mypost", typeof(Views.MyPostPage)); // 新增：我的发布页面路由
             Routing.RegisterRoute("search", typeof(SearchPage));
             Routing.RegisterRoute("myprofile", typeof(MyProfilePage));
 
@@ -83,7 +116,7 @@ namespace PCBetaMAUI
                 if (logoutButton != null)
                     logoutButton.IsVisible = _isLoggedIn;
 
-                Debug.WriteLine($"✅ 登录状态已更新: {_isLoggedIn}，我的通知可见性: {_isMyNoticeVisible}");
+                Debug.WriteLine($"✅ 登录状态已更新: {_isLoggedIn}，我的通知可见性: {_isMyNoticeVisible}, 我的收藏可见性: {_isMyFavoriteVisible}");
             });
         }
 
