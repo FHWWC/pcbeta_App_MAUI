@@ -139,7 +139,8 @@ public class HttpClientWithCookieManagement : IDisposable
 
             if (challengeCookie == null)
             {
-                throw new InvalidOperationException("访问登录页后未获取 access_env_challenge Cookie");
+                return;
+                //throw new InvalidOperationException("访问登录页后未获取 access_env_challenge Cookie");
             }
 
             using var reviewContent = new FormUrlEncodedContent(new Dictionary<string, string>
@@ -162,15 +163,16 @@ public class HttpClientWithCookieManagement : IDisposable
 
             if (verifiedCookie == null)
             {
-                throw new InvalidOperationException("环境审核响应未获取 access_env_verified Cookie");
+                //throw new InvalidOperationException("环境审核响应未获取 access_env_verified Cookie");
+                return;
             }
 
-            Debug.WriteLine("✅ PCBETA 环境验证完成，已获取 access_env_verified Cookie");
+            //Debug.WriteLine("✅ PCBETA 环境验证完成，已获取 access_env_verified Cookie");
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"❌ PCBETA 环境验证失败: {ex.Message}");
-            throw;
+            //Debug.WriteLine($"❌ PCBETA 环境验证失败: {ex.Message}");
+            return;
         }
     }
 
