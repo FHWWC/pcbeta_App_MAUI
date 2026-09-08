@@ -9,7 +9,7 @@ namespace PCBetaMAUI
     {
         private readonly PasswordSecurityService _passwordService;
         private readonly ApiService _apiService;
-        public DateTime CurrentVersion = DateTime.ParseExact("2026.09.06 20:00:00", "yyyy.MM.dd HH:mm:ss", System.Globalization.CultureInfo.InvariantCulture); // 当前版本发布日期
+        public DateTime CurrentVersion = DateTime.ParseExact("2026.09.08 22:20:00", "yyyy.MM.dd HH:mm:ss", System.Globalization.CultureInfo.InvariantCulture); // 当前版本发布日期
         public App()
         {
             InitializeComponent();
